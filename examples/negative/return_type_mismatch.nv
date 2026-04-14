@@ -1,0 +1,6 @@
+fn sum(x: int, y: int) : bool {
+    return x + y;
+}
+fn main() : void {
+    return;
+}

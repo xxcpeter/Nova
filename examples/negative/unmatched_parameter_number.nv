@@ -1,0 +1,7 @@
+fn main() : void {
+    inverse_int(1, 2);
+    return;
+}
+fn inverse_int(x: int) : int {
+    return -x;
+}

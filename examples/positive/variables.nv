@@ -1,0 +1,9 @@
+fn main() : void {
+    let x : int = 1;
+    {
+        let x : str = "a";
+        x = str_concat(x, "b");
+    }
+    x = x + 1;
+    return;
+}

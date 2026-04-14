@@ -1,0 +1,15 @@
+fn main() : void {
+    let x : int = 10;
+    let y : str = "b";
+    let z : str = repeat_str(y, x);
+    print_str(z);
+    return;
+}
+fn repeat_str(base_str: str, times: int) : str {
+    let result : str = "";
+    while (times >= 1) {
+        result = str_concat(result, base_str);
+        times = times - 1;
+    }
+    return result;
+}

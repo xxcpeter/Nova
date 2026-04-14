@@ -1,0 +1,8 @@
+fn main() : void {
+    let x : int = 10;
+    while (x >= 1) {
+        print_int(x);
+        x = x - 1;
+    }
+    return;
+}
