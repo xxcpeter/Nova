@@ -1,0 +1,16 @@
+KW_FN("fn") at 1:1
+KW_LET("let") at 2:1
+KW_IF("if") at 3:1
+KW_ELSE("else") at 4:1
+KW_WHILE("while") at 5:1
+KW_RETURN("return") at 6:1
+KW_TRUE("true") at 7:1
+KW_FALSE("false") at 8:1
+KW_INT("int") at 9:1
+KW_BOOL("bool") at 10:1
+KW_STR("str") at 11:1
+KW_VOID("void") at 12:1
+IDENT("main") at 13:1
+IDENT("_tmp") at 14:1
+IDENT("abc123") at 15:1
+EndOfFile("") at 16:1

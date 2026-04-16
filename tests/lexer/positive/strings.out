@@ -1,0 +1,6 @@
+STR_LITERAL("\"\"") at 1:1
+STR_LITERAL("\"a\"") at 2:1
+STR_LITERAL("\"aa\\\"\"") at 3:1
+STR_LITERAL("\"\\\\\"") at 4:1
+STR_LITERAL("\"\\n\"") at 5:1
+EndOfFile("") at 6:1

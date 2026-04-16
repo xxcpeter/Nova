@@ -1,0 +1,11 @@
+KW_FN("fn") at 3:1
+IDENT("main") at 3:4
+LPAREN("(") at 3:8
+RPAREN(")") at 3:9
+COLON(":") at 3:11
+KW_VOID("void") at 3:13
+LBRACE("{") at 3:18
+KW_RETURN("return") at 3:20
+SEMIC(";") at 3:26
+RBRACE("}") at 3:28
+EndOfFile("") at 4:1

@@ -1,0 +1,5 @@
+INT_LITERAL("0") at 1:1
+INT_LITERAL("7") at 2:1
+INT_LITERAL("42") at 3:1
+INT_LITERAL("123456") at 4:1
+EndOfFile("") at 5:1
