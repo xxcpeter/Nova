@@ -1,0 +1,16 @@
+Program name=assignment_right_assoc.nv
+  FunctionDecl name=main return=void
+    Params
+    Body
+      BlockStmt
+        ExprStmt
+          AssignExpr
+            Target
+              IdentifierExpr name=a
+            Value
+              AssignExpr
+                Target
+                  IdentifierExpr name=b
+                Value
+                  IdentifierExpr name=c
+        ReturnStmt

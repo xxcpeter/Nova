@@ -1,9 +1,9 @@
-if(NOT DEFINED LEXER OR NOT DEFINED INPUT OR NOT DEFINED EXPECT OR NOT DEFINED MODE)
-    message(FATAL_ERROR "LEXER / INPUT / EXPECT / MODE must all be defined")
+if(NOT DEFINED TOOL OR NOT DEFINED INPUT OR NOT DEFINED EXPECT OR NOT DEFINED MODE)
+    message(FATAL_ERROR "TOOL / INPUT / EXPECT / MODE must all be defined")
 endif()
 
 execute_process(
-    COMMAND "${LEXER}" "${INPUT}"
+    COMMAND "${TOOL}" "${INPUT}"
     RESULT_VARIABLE rv
     OUTPUT_VARIABLE out
     ERROR_VARIABLE err
@@ -11,7 +11,7 @@ execute_process(
 
 file(READ "${EXPECT}" expect)
 
-# Normalize line endings first.
+# Normalize line endings.
 string(REPLACE "\r\n" "\n" out "${out}")
 string(REPLACE "\r\n" "\n" err "${err}")
 string(REPLACE "\r\n" "\n" expect "${expect}")
@@ -20,12 +20,12 @@ string(REPLACE "\r" "\n" out "${out}")
 string(REPLACE "\r" "\n" err "${err}")
 string(REPLACE "\r" "\n" expect "${expect}")
 
-# Escape semicolons so CMake list splitting does not destroy token lines.
+# Escape semicolons so CMake list splitting does not break lines.
 string(REPLACE ";" "\\;" out "${out}")
 string(REPLACE ";" "\\;" err "${err}")
 string(REPLACE ";" "\\;" expect "${expect}")
 
-# Remove one trailing newline for cleaner comparison.
+# Remove one trailing newline.
 string(REGEX REPLACE "\n$" "" out "${out}")
 string(REGEX REPLACE "\n$" "" err "${err}")
 string(REGEX REPLACE "\n$" "" expect "${expect}")

@@ -1,0 +1,8 @@
+Program name=let_and_return.nv
+  FunctionDecl name=main return=void
+    Params
+    Body
+      BlockStmt
+        LetStmt name=x type=int
+          IntLiteralExpr value=1
+        ReturnStmt

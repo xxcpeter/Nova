@@ -1,0 +1,6 @@
+Program name=minimal_function.nv
+  FunctionDecl name=main return=void
+    Params
+    Body
+      BlockStmt
+        ReturnStmt

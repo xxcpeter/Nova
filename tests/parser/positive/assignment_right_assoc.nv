@@ -1,0 +1,4 @@
+fn main() : void {
+    a = b = c;
+    return;
+}

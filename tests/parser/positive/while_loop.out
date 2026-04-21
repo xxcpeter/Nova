@@ -1,0 +1,21 @@
+Program name=while_loop.nv
+  FunctionDecl name=main return=void
+    Params
+    Body
+      BlockStmt
+        WhileStmt
+          Condition
+            BinaryExpr op=Greater
+              IdentifierExpr name=x
+              IntLiteralExpr value=0
+          Body
+            BlockStmt
+              ExprStmt
+                AssignExpr
+                  Target
+                    IdentifierExpr name=x
+                  Value
+                    BinaryExpr op=Sub
+                      IdentifierExpr name=x
+                      IntLiteralExpr value=1
+        ReturnStmt

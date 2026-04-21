@@ -1,0 +1,8 @@
+fn main() : void {
+    let z : str = repeat_str("a", 3);
+    return;
+}
+
+fn repeat_str(base: str, times: int) : str {
+    return base;
+}

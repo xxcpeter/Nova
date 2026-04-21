@@ -1,0 +1,12 @@
+Program name=nested_blocks.nv
+  FunctionDecl name=main return=void
+    Params
+    Body
+      BlockStmt
+        BlockStmt
+          LetStmt name=x type=int
+            IntLiteralExpr value=1
+          BlockStmt
+            ExprStmt
+              IdentifierExpr name=x
+        ReturnStmt

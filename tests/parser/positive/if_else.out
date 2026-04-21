@@ -1,0 +1,16 @@
+Program name=if_else.nv
+  FunctionDecl name=main return=void
+    Params
+    Body
+      BlockStmt
+        IfStmt
+          Condition
+            BinaryExpr op=Greater
+              IdentifierExpr name=x
+              IntLiteralExpr value=0
+          Then
+            BlockStmt
+              ReturnStmt
+          Else
+            BlockStmt
+              ReturnStmt

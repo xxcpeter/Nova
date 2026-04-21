@@ -1,0 +1,12 @@
+Program name=precedence.nv
+  FunctionDecl name=main return=void
+    Params
+    Body
+      BlockStmt
+        ExprStmt
+          BinaryExpr op=Add
+            IntLiteralExpr value=1
+            BinaryExpr op=Mul
+              IntLiteralExpr value=2
+              IntLiteralExpr value=3
+        ReturnStmt
