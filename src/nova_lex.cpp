@@ -29,16 +29,17 @@ int main(int argc, char* argv[]) {
     std::string source = read_file(path);
     
     Lexer lexer(source, name);
-    std::vector<Token> token_list;
     try {
-        token_list = lexer.tokenize();
+        auto token_list = lexer.tokenize();
+        for (const auto& i : token_list) 
+            std::cout << i << std::endl;
     } catch (const LexError& e) {
         std::cerr << e.what() << std::endl;
         return 1;
+    } catch (const std::exception& e) {
+        std::cerr << "Unexpected error: " << e.what() << std::endl;
+        return 1;
     }
-    
-    for (const auto& i : token_list) 
-        std::cout << i << std::endl;
     
     return 0;
 }

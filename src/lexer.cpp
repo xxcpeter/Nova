@@ -130,85 +130,53 @@ Token Lexer::lex_operator_or_punc() {
     char curr = peek();
     char next = peek_next();
     std::string lexeme;
+    using enum TokenType;
 
     // Check two-character operators
     if (curr == '=' && next == '=') {
         advance(); advance();
-        return Token{ TokenType::EQ_EQ, "=="s, location };
+        return Token{ EQ_EQ, "=="s, location };
     }
     if (curr == '!' && next == '=') {
         advance(); advance();
-        return Token{ TokenType::BANG_EQ, "!="s, location };
+        return Token{ BANG_EQ, "!="s, location };
     }
     if (curr == '<' && next == '=') {
         advance(); advance();
-        return Token{ TokenType::LE, "<="s, location };
+        return Token{ LE, "<="s, location };
     }
     if (curr == '>' && next == '=') {
         advance(); advance();
-        return Token{ TokenType::GE, ">="s, location };
+        return Token{ GE, ">="s, location };
     }
     if (curr == '&' && next == '&') {
         advance(); advance();
-        return Token{ TokenType::AND_AND, "&&"s, location };
+        return Token{ AND_AND, "&&"s, location };
     }
     if (curr == '|' && next == '|') {
         advance(); advance();
-        return Token{ TokenType::OR_OR, "||"s, location };
+        return Token{ OR_OR, "||"s, location };
     }
 
     // Check single-character operators and punctuation
     switch (curr) {
-        case '+':
-            advance();
-            return Token{ TokenType::PLUS, "+"s, location };
-        case '-':
-            advance();
-            return Token{ TokenType::MINUS, "-"s, location };
-        case '*':
-            advance();
-            return Token{ TokenType::STAR, "*"s, location };
-        case '/':
-            advance();
-            return Token{ TokenType::SLASH, "/"s, location };
-        case '%':
-            advance();
-            return Token{ TokenType::PERCENT, "%"s, location };
-        case '=':
-            advance();
-            return Token{ TokenType::ASSIGN, "="s, location };
-        case '<':
-            advance();
-            return Token{ TokenType::LT, "<"s, location };
-        case '>':
-            advance();
-            return Token{ TokenType::GT, ">"s, location };
-        case '!':
-            advance();
-            return Token{ TokenType::BANG, "!"s, location };
-        case '(':
-            advance();
-            return Token{ TokenType::LPAREN, "("s, location };
-        case ')':
-            advance();
-            return Token{ TokenType::RPAREN, ")"s, location };
-        case '{':
-            advance();
-            return Token{ TokenType::LBRACE, "{"s, location };
-        case '}':
-            advance();
-            return Token{ TokenType::RBRACE, "}"s, location };
-        case ',':
-            advance();
-            return Token{ TokenType::COMMA, ","s, location };
-        case ';':
-            advance();
-            return Token{ TokenType::SEMIC, ";"s, location };
-        case ':':
-            advance();
-            return Token{ TokenType::COLON, ":"s, location };
-        default:
-            throw LexError(std::format("Unexpected operator '{}'", curr), location);
+        case '+': advance(); return Token{ PLUS, "+"s, location };
+        case '-': advance(); return Token{ MINUS, "-"s, location };
+        case '*': advance(); return Token{ STAR, "*"s, location };
+        case '/': advance(); return Token{ SLASH, "/"s, location };
+        case '%': advance(); return Token{ PERCENT, "%"s, location };
+        case '=': advance(); return Token{ ASSIGN, "="s, location };
+        case '<': advance(); return Token{ LT, "<"s, location };
+        case '>': advance(); return Token{ GT, ">"s, location };
+        case '!': advance(); return Token{ BANG, "!"s, location };
+        case '(': advance(); return Token{ LPAREN, "("s, location };
+        case ')': advance(); return Token{ RPAREN, ")"s, location };
+        case '{': advance(); return Token{ LBRACE, "{"s, location };
+        case '}': advance(); return Token{ RBRACE, "}"s, location };
+        case ',': advance(); return Token{ COMMA, ","s, location };
+        case ';': advance(); return Token{ SEMIC, ";"s, location };
+        case ':': advance(); return Token{ COLON, ":"s, location };
+        default: throw LexError(std::format("Unexpected operator '{}'", curr), location);
     }
 }
 
