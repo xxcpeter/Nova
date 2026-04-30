@@ -1,0 +1,1 @@
+SemanticError at 2:12: type error in while condition: expected bool, got int

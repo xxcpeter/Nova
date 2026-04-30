@@ -1,0 +1,8 @@
+fn id(x: int) : int {
+    return x;
+}
+
+fn main() : void {
+    let x : int = id(true);
+    return;
+}

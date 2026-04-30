@@ -1,0 +1,12 @@
+fn factorial(n: int) : int {
+    if (n > 0) {
+        return n * factorial(n - 1);
+    } else {
+        return 1;
+    }
+}
+
+fn main() : void {
+    print_int(factorial(5));
+    return;
+}

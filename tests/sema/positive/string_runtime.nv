@@ -1,0 +1,9 @@
+fn main() : void {
+    let s : str = str_concat("a", "b");
+    if (str_eq(s, "ab")) {
+        print_str(s);
+    } else {
+        print_str("no");
+    }
+    return;
+}

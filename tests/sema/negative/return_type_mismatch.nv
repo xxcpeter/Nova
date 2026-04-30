@@ -1,0 +1,7 @@
+fn f() : int {
+    return true;
+}
+
+fn main() : void {
+    return;
+}

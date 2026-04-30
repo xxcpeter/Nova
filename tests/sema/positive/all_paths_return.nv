@@ -1,0 +1,12 @@
+fn choose(flag: bool) : int {
+    if (flag) {
+        return 1;
+    } else {
+        return 2;
+    }
+}
+
+fn main() : void {
+    print_int(choose(true));
+    return;
+}

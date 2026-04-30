@@ -1,0 +1,1 @@
+SemanticError at 6:22: type error in argument 1 in call to 'id': expected int, got bool

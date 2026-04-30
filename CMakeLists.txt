@@ -46,6 +46,27 @@ target_compile_options(nova_parse
 )
 
 
+add_executable(nova_sema
+    src/token.cpp
+    src/lexer.cpp
+    src/parser.cpp
+    src/sema.cpp
+    src/nova_sema.cpp
+)
+
+target_include_directories(nova_sema
+    PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+
+target_compile_options(nova_sema
+    PRIVATE
+        -Wall
+        -Wextra
+        -Wpedantic
+)
+
+
 enable_testing()
 
 set(TEXT_TEST_DRIVER ${CMAKE_CURRENT_SOURCE_DIR}/cmake/RunTextCompareTest.cmake)
@@ -104,6 +125,35 @@ function(add_parser_negative_test name)
     set_tests_properties(parser_negative_${name} PROPERTIES LABELS "parser;negative")
 endfunction()
 
+function(add_sema_positive_test name)
+    add_test(
+        NAME sema_positive_${name}
+        COMMAND ${CMAKE_COMMAND}
+            -DTOOL=$<TARGET_FILE:nova_sema>
+            -DINPUT=${CMAKE_CURRENT_SOURCE_DIR}/tests/sema/positive/${name}.nv
+            -DEXPECT=${CMAKE_CURRENT_SOURCE_DIR}/tests/sema/positive/${name}.out
+            -DMODE=positive
+            -DLABEL=stdout
+            -P ${TEXT_TEST_DRIVER}
+    )
+    set_tests_properties(sema_positive_${name} PROPERTIES LABELS "sema;positive")
+endfunction()
+
+function(add_sema_negative_test name)
+    add_test(
+        NAME sema_negative_${name}
+        COMMAND ${CMAKE_COMMAND}
+            -DTOOL=$<TARGET_FILE:nova_sema>
+            -DINPUT=${CMAKE_CURRENT_SOURCE_DIR}/tests/sema/negative/${name}.nv
+            -DEXPECT=${CMAKE_CURRENT_SOURCE_DIR}/tests/sema/negative/${name}.err
+            -DMODE=negative
+            -DLABEL=stderr
+            -P ${TEXT_TEST_DRIVER}
+    )
+    set_tests_properties(sema_negative_${name} PROPERTIES LABELS "sema;negative")
+endfunction()
+
+
 add_lexer_positive_test(single_tokens)
 add_lexer_positive_test(keywords_and_identifiers)
 add_lexer_positive_test(numbers)
@@ -137,3 +187,26 @@ add_parser_negative_test(missing_type_in_let)
 add_parser_negative_test(invalid_return_expr)
 add_parser_negative_test(incomplete_binary_expr)
 add_parser_negative_test(malformed_call_args)
+
+add_sema_positive_test(basic_program)
+add_sema_positive_test(function_call)
+add_sema_positive_test(shadowing)
+add_sema_positive_test(recursion)
+add_sema_positive_test(string_runtime)
+add_sema_positive_test(all_paths_return)
+
+add_sema_negative_test(undefined_variable)
+add_sema_negative_test(duplicate_variable_same_scope)
+add_sema_negative_test(duplicate_function)
+add_sema_negative_test(duplicate_parameter_name)
+add_sema_negative_test(assignment_type_mismatch)
+add_sema_negative_test(invalid_assignment_target)
+add_sema_negative_test(if_condition_not_bool)
+add_sema_negative_test(while_condition_not_bool)
+add_sema_negative_test(return_value_in_void_function)
+add_sema_negative_test(empty_return_in_non_void_function)
+add_sema_negative_test(missing_return_in_non_void_function)
+add_sema_negative_test(return_type_mismatch)
+add_sema_negative_test(function_argument_count_mismatch)
+add_sema_negative_test(function_argument_type_mismatch)
+add_sema_negative_test(call_unknown_function)

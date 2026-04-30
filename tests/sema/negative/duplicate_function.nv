@@ -1,0 +1,11 @@
+fn f() : void {
+    return;
+}
+
+fn f() : void {
+    return;
+}
+
+fn main() : void {
+    return;
+}
