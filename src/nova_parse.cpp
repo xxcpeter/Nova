@@ -1,4 +1,5 @@
 #include "ast.h"
+#include "ast_dump.h"
 #include "parser.h"
 #include "lexer.h"
 
@@ -28,15 +29,14 @@ int main(int argc, char* argv[]) {
     std::string path = argv[1];
     std::string name = std::filesystem::path(path).filename().string();
     std::string source = read_file(path);
-    
-    Lexer lexer(source, name);
-    std::vector<Token> token_list;
-    Parser parser(token_list, name);
-    
+        
     try {
-        token_list = lexer.tokenize();
+        Lexer lexer(source, name);
+        auto token_list = lexer.tokenize();
+        Parser parser(token_list, name);
         auto program = parser.parse_program();
-        program->dump(std::cout, 0);
+        ASTDumper dumper(std::cout);
+        program->accept(dumper);
     } catch (const ParseError& e) {
         std::cerr << e.what() << std::endl;
         return 1;

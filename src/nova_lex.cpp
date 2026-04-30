@@ -28,8 +28,8 @@ int main(int argc, char* argv[]) {
     std::string name = std::filesystem::path(path).filename().string();
     std::string source = read_file(path);
     
-    Lexer lexer(source, name);
     try {
+        Lexer lexer(source, name);
         auto token_list = lexer.tokenize();
         for (const auto& i : token_list) 
             std::cout << i << std::endl;

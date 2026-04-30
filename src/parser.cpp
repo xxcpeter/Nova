@@ -1,4 +1,5 @@
 #include "parser.h"
+#include <iostream>
 
 
 bool Parser::is_at_end() const {
@@ -122,11 +123,11 @@ std::unique_ptr<FunctionDecl> Parser::parse_function() {
     std::vector<ParamDecl> params = parse_param_list();
     expect(TokenType::RPAREN, "expected ')' after parameter list");
     expect(TokenType::COLON, "expected ':' before return type");
-    TypeKind returnType = parse_type();
+    TypeKind return_type = parse_type();
     expect(TokenType::LBRACE, "expected '{' at the beginning of function body");
     std::unique_ptr<BlockStmt> body = parse_block();
     return std::make_unique<FunctionDecl>(
-        std::move(name), std::move(params), returnType, std::move(body), location);
+        std::move(name), std::move(params), return_type, std::move(body), location);
 }
 
 
@@ -180,7 +181,8 @@ std::unique_ptr<BlockStmt> Parser::parse_block() {
 
 std::unique_ptr<Stmt> Parser::parse_let_stmt() {
     SourceLocation location = previous().location;
-    
+    SourceLocation name_location = peek().location;
+
     expect(TokenType::IDENT, "expected variable name");
     std::string name = previous().lexeme;
     expect(TokenType::COLON, "expected ':' after variable name");
@@ -190,7 +192,7 @@ std::unique_ptr<Stmt> Parser::parse_let_stmt() {
     expect(TokenType::SEMIC, "expected ';' after variable declaration");
     
     return std::make_unique<LetStmt>(
-        std::move(name), declared_type, std::move(initializer), location);
+        std::move(name), declared_type, std::move(initializer), location, name_location);
 }
 
 
@@ -262,9 +264,6 @@ std::unique_ptr<Expr> Parser::parse_expression() {
 std::unique_ptr<Expr> Parser::parse_assignment() {
     std::unique_ptr<Expr> expr = parse_logical_or();
     if (match(TokenType::ASSIGN)) {
-        if (dynamic_cast<IdentifierExpr*>(expr.get()) == nullptr) {
-            throw ParseError("invalid assignment target", previous().location);
-        }
         SourceLocation location = previous().location;
         std::unique_ptr<Expr> value = parse_assignment();
         return std::make_unique<AssignExpr>(

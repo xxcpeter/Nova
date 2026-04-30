@@ -1,13 +1,11 @@
 #pragma once
 
 #include "token.h"
+#include "ast_visitor.h"
 
 #include <string>
 #include <vector>
 #include <memory>
-#include <typeinfo>
-#include <ostream>
-#include <iomanip>
 
 
 enum class TypeKind {
@@ -16,17 +14,6 @@ enum class TypeKind {
     Str,
     Void,
 };
-
-
-inline const char* type_to_string(TypeKind type) {
-    switch (type) {
-        case TypeKind::Int:  return "int";
-        case TypeKind::Bool: return "bool";
-        case TypeKind::Str:  return "str";
-        case TypeKind::Void: return "void";
-        default:             return "unknown";
-    }
-}
 
 
 enum class UnaryOp {
@@ -52,6 +39,17 @@ enum class BinaryOp {
     LeEq,       // <=
     GrEq,       // >=
 };
+
+
+inline const char* type_to_string(TypeKind type) {
+    switch (type) {
+        case TypeKind::Int:  return "int";
+        case TypeKind::Bool: return "bool";
+        case TypeKind::Str:  return "str";
+        case TypeKind::Void: return "void";
+        default:             return "unknown";
+    }
+}
 
 
 inline const char* unary_op_to_string(UnaryOp op) {
@@ -88,8 +86,7 @@ struct ASTNode {
 
     ASTNode(SourceLocation location) : location(location) {}
     virtual ~ASTNode() = default;
-    virtual void dump(std::ostream& os, int indent) const = 0;
-    // virtual const char* node_name() const = 0;
+    virtual void accept(ASTVisitor& visitor) const = 0;
 };
 
 
@@ -112,49 +109,34 @@ struct BlockStmt : Stmt {
     std::vector<std::unique_ptr<Stmt>> statements;
     
     BlockStmt(std::vector<std::unique_ptr<Stmt>> stmts, SourceLocation loc) : 
-        statements(std::move(stmts)), Stmt(loc) {}
-
-    void dump(std::ostream& os, int indent) const override {
-        os << std::string(indent, ' ') << "BlockStmt\n";
-        for (const auto& stmt : statements) {
-            stmt->dump(os, indent + 2);
-        }
-    }
+         Stmt(loc), statements(std::move(stmts)) {}
+    
+    void accept(ASTVisitor& visitor) const override { visitor.visit(*this); }
 };
 
 
 struct ParamDecl {
+    SourceLocation location;
     std::string name;
     TypeKind type;
-    SourceLocation location;
 
     ParamDecl(std::string name, TypeKind type, SourceLocation loc) : 
-        name(std::move(name)), type(type), location(loc) {}
+        location(loc), name(std::move(name)), type(type) {}
 
-    void dump(std::ostream& os, int indent) const {
-        os << std::string(indent, ' ') << "ParamDecl name=" << name << " type=" << type_to_string(type) << "\n";
-    }
+    void accept(ASTVisitor& visitor) const { visitor.visit(*this); }
 };
 
 
 struct FunctionDecl : Decl {
     std::string name;
     std::vector<ParamDecl> params;
-    TypeKind returnType;
+    TypeKind return_type;
     std::unique_ptr<BlockStmt> body;
 
-    FunctionDecl(std::string name, std::vector<ParamDecl> params, TypeKind returnType, std::unique_ptr<BlockStmt> body, SourceLocation loc) :
-        name(std::move(name)), params(std::move(params)), returnType(returnType), body(std::move(body)), Decl(loc) {}
-
-    void dump(std::ostream& os, int indent) const override {
-        os << std::string(indent, ' ') << "FunctionDecl name=" << name << " return=" << type_to_string(returnType) << "\n";
-        os << std::string(indent + 2, ' ') << "Params\n";
-        for (const auto& param : params) {
-            param.dump(os, indent + 4);
-        }
-        os << std::string(indent + 2, ' ') << "Body\n";
-        body->dump(os, indent + 4);
-    }
+    FunctionDecl(std::string name, std::vector<ParamDecl> params, TypeKind return_type, std::unique_ptr<BlockStmt> body, SourceLocation loc) :
+        Decl(loc), name(std::move(name)), params(std::move(params)), return_type(return_type), body(std::move(body)) {}
+    
+    void accept(ASTVisitor& visitor) const override { visitor.visit(*this); }
 };
 
 
@@ -163,14 +145,9 @@ struct Program : ASTNode {
     std::vector<std::unique_ptr<FunctionDecl>> functions;
 
     Program(std::string name, std::vector<std::unique_ptr<FunctionDecl>> functions, SourceLocation loc) :
-        name(std::move(name)), functions(std::move(functions)), ASTNode(loc) {}
+        ASTNode(loc), name(std::move(name)), functions(std::move(functions)) {}
 
-    void dump(std::ostream& os, int indent) const override {
-        os << std::string(indent, ' ') << "Program name=" << name << "\n";
-        for (const auto& func : functions) {
-            func->dump(os, indent + 2);
-        }
-    }
+    void accept(ASTVisitor& visitor) const override { visitor.visit(*this); }
 };
 
 
@@ -178,16 +155,12 @@ struct LetStmt : Stmt {
     std::string name;
     TypeKind declared_type;
     std::unique_ptr<Expr> initializer;
+    SourceLocation name_location;
 
-    LetStmt(std::string name, TypeKind declared_type, std::unique_ptr<Expr> initializer, SourceLocation loc) :
-        name(std::move(name)), declared_type(declared_type), initializer(std::move(initializer)), Stmt(loc) {}
+    LetStmt(std::string name, TypeKind declared_type, std::unique_ptr<Expr> initializer, SourceLocation loc, SourceLocation name_loc) :
+        Stmt(loc), name(std::move(name)), declared_type(declared_type), initializer(std::move(initializer)), name_location(name_loc) {}
 
-    void dump(std::ostream& os, int indent) const override {
-        os << std::string(indent, ' ') << "LetStmt name=" << name << " type=" << type_to_string(declared_type) << "\n";
-        if (initializer) {
-            initializer->dump(os, indent + 2);
-        }
-    }
+    void accept(ASTVisitor& visitor) const override { visitor.visit(*this); }
 };
 
 
@@ -197,19 +170,9 @@ struct IfStmt : Stmt {
     std::unique_ptr<Stmt> else_branch; // optional
 
     IfStmt(std::unique_ptr<Expr> condition, std::unique_ptr<Stmt> then_branch, std::unique_ptr<Stmt> else_branch, SourceLocation loc) :
-        condition(std::move(condition)), then_branch(std::move(then_branch)), else_branch(std::move(else_branch)), Stmt(loc) {}
-
-    void dump(std::ostream& os, int indent) const override {
-        os << std::string(indent, ' ') << "IfStmt\n";
-        os << std::string(indent + 2, ' ') << "Condition\n";
-        condition->dump(os, indent + 4);
-        os << std::string(indent + 2, ' ') << "Then\n";
-        then_branch->dump(os, indent + 4);
-        if (else_branch) {
-            os << std::string(indent + 2, ' ') << "Else\n";
-            else_branch->dump(os, indent + 4);
-        }
-    }
+        Stmt(loc), condition(std::move(condition)), then_branch(std::move(then_branch)), else_branch(std::move(else_branch)) {}
+    
+    void accept(ASTVisitor& visitor) const override { visitor.visit(*this); }
 };
 
 
@@ -218,15 +181,9 @@ struct WhileStmt : Stmt {
     std::unique_ptr<Stmt> body;
 
     WhileStmt(std::unique_ptr<Expr> condition, std::unique_ptr<Stmt> body, SourceLocation loc) :
-        condition(std::move(condition)), body(std::move(body)), Stmt(loc) {}
-    
-    void dump(std::ostream& os, int indent) const override {
-        os << std::string(indent, ' ') << "WhileStmt\n";
-        os << std::string(indent + 2, ' ') << "Condition\n";
-        condition->dump(os, indent + 4);
-        os << std::string(indent + 2, ' ') << "Body\n";
-        body->dump(os, indent + 4);
-    }
+        Stmt(loc), condition(std::move(condition)), body(std::move(body)) {}
+
+    void accept(ASTVisitor& visitor) const override { visitor.visit(*this); }
 };
 
 
@@ -234,14 +191,9 @@ struct ReturnStmt : Stmt {
     std::unique_ptr<Expr> value; // optional
 
     ReturnStmt(std::unique_ptr<Expr> value, SourceLocation loc) :
-        value(std::move(value)), Stmt(loc) {}
+        Stmt(loc), value(std::move(value)) {}
 
-    void dump(std::ostream& os, int indent) const override {
-        os << std::string(indent, ' ') << "ReturnStmt\n";
-        if (value) {
-            value->dump(os, indent + 2);
-        }
-    }
+    void accept(ASTVisitor& visitor) const override { visitor.visit(*this); }
 };
 
 
@@ -249,12 +201,9 @@ struct ExprStmt : Stmt {
     std::unique_ptr<Expr> expr;
 
     ExprStmt(std::unique_ptr<Expr> expr, SourceLocation loc) :
-        expr(std::move(expr)), Stmt(loc) {}
+        Stmt(loc), expr(std::move(expr)) {}
 
-    void dump(std::ostream& os, int indent) const override {
-        os << std::string(indent, ' ') << "ExprStmt\n";
-        expr->dump(os, indent + 2);
-    }
+    void accept(ASTVisitor& visitor) const override { visitor.visit(*this); }
 };
 
 
@@ -263,15 +212,9 @@ struct AssignExpr : Expr {
     std::unique_ptr<Expr> value;
 
     AssignExpr(std::unique_ptr<Expr> target, std::unique_ptr<Expr> value, SourceLocation loc) :
-        target(std::move(target)), value(std::move(value)), Expr(loc) {}
+        Expr(loc), target(std::move(target)), value(std::move(value)) {}
 
-    void dump(std::ostream& os, int indent) const override {
-        os << std::string(indent, ' ') << "AssignExpr\n";
-        os << std::string(indent + 2, ' ') << "Target\n";
-        target->dump(os, indent + 4);
-        os << std::string(indent + 2, ' ') << "Value\n";
-        value->dump(os, indent + 4);
-    }
+    void accept(ASTVisitor& visitor) const override { visitor.visit(*this); }
 };
 
 
@@ -281,13 +224,9 @@ struct BinaryExpr : Expr {
     std::unique_ptr<Expr> right;
 
     BinaryExpr(BinaryOp op, std::unique_ptr<Expr> left, std::unique_ptr<Expr> right, SourceLocation loc) :
-        op(op), left(std::move(left)), right(std::move(right)), Expr(loc) {}
+        Expr(loc), op(op), left(std::move(left)), right(std::move(right)) {}
 
-    void dump(std::ostream& os, int indent) const override {
-        os << std::string(indent, ' ') << "BinaryExpr op=" << binary_op_to_string(op) << "\n";
-        left->dump(os, indent + 2);
-        right->dump(os, indent + 2);
-    }
+    void accept(ASTVisitor& visitor) const override { visitor.visit(*this); }
 };
 
 
@@ -296,12 +235,9 @@ struct UnaryExpr : Expr {
     std::unique_ptr<Expr> operand;
 
     UnaryExpr(UnaryOp op, std::unique_ptr<Expr> operand, SourceLocation loc) :
-        op(op), operand(std::move(operand)), Expr(loc) {}
+        Expr(loc), op(op), operand(std::move(operand)) {}
 
-    void dump(std::ostream& os, int indent) const override {
-        os << std::string(indent, ' ') << "UnaryExpr op=" << unary_op_to_string(op) << "\n";
-        operand->dump(os, indent + 2);
-    }
+    void accept(ASTVisitor& visitor) const override { visitor.visit(*this); }
 };
 
 
@@ -310,14 +246,9 @@ struct CallExpr : Expr {
     std::vector<std::unique_ptr<Expr>> arguments;
     
     CallExpr(std::string callee, std::vector<std::unique_ptr<Expr>> arguments, SourceLocation loc) :
-        callee(std::move(callee)), arguments(std::move(arguments)), Expr(loc) {}
+        Expr(loc), callee(std::move(callee)), arguments(std::move(arguments)) {}
 
-    void dump(std::ostream& os, int indent) const override {
-        os << std::string(indent, ' ') << "CallExpr callee=" << callee << "\n";
-        for (const auto& arg : arguments) {
-            arg->dump(os, indent + 2);
-        }
-    }
+    void accept(ASTVisitor& visitor) const override { visitor.visit(*this); }
 };
 
 
@@ -325,11 +256,9 @@ struct IdentifierExpr : Expr {
     std::string name;
 
     IdentifierExpr(std::string name, SourceLocation loc) :
-        name(std::move(name)), Expr(loc) {}
+        Expr(loc), name(std::move(name)) {}
 
-    void dump(std::ostream& os, int indent) const override {
-        os << std::string(indent, ' ') << "IdentifierExpr name=" << name << "\n";
-    }
+    void accept(ASTVisitor& visitor) const override { visitor.visit(*this); }
 };
 
 
@@ -337,11 +266,9 @@ struct IntLiteralExpr : Expr {
     long long int value;
 
     IntLiteralExpr(long long int value, SourceLocation loc) :
-        value(value), Expr(loc) {}
-
-    void dump(std::ostream& os, int indent) const override {
-        os << std::string(indent, ' ') << "IntLiteralExpr value=" << value << "\n";
-    }
+        Expr(loc), value(value) {}
+    
+    void accept(ASTVisitor& visitor) const override { visitor.visit(*this); }
 };
 
 
@@ -349,11 +276,9 @@ struct BoolLiteralExpr : Expr {
     bool value;
 
     BoolLiteralExpr(bool value, SourceLocation loc) :
-        value(value), Expr(loc) {}
+        Expr(loc), value(value) {}
     
-    void dump(std::ostream& os, int indent) const override {
-        os << std::string(indent, ' ') << "BoolLiteralExpr value=" << value << "\n";
-    }
+    void accept(ASTVisitor& visitor) const override { visitor.visit(*this); }
 };
 
 
@@ -361,9 +286,7 @@ struct StrLiteralExpr : Expr {
     std::string lexeme;
 
     StrLiteralExpr(std::string value, SourceLocation loc) :
-        lexeme(std::move(value)), Expr(loc) {}
+        Expr(loc), lexeme(std::move(value)) {}
 
-    void dump(std::ostream& os, int indent) const override {
-        os << std::string(indent, ' ') << "StringLiteralExpr lexeme=" << std::quoted(lexeme) << "\n";
-    }
+    void accept(ASTVisitor& visitor) const override { visitor.visit(*this); }
 };
