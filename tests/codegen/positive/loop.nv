@@ -1,0 +1,12 @@
+fn main() : void {
+    let i : int = 1;
+    let sum : int = 0;
+
+    while (i <= 5) {
+        sum = sum + i;
+        i = i + 1;
+    }
+
+    print_int(sum);
+    return;
+}

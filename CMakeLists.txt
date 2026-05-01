@@ -67,9 +67,32 @@ target_compile_options(nova_sema
 )
 
 
+add_executable(nova_compile
+    src/token.cpp
+    src/lexer.cpp
+    src/parser.cpp
+    src/sema.cpp
+    src/codegen_c.cpp
+    src/nova_compile.cpp
+)
+
+target_include_directories(nova_compile
+    PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+
+target_compile_options(nova_compile
+    PRIVATE
+        -Wall
+        -Wextra
+        -Wpedantic
+)
+
+
 enable_testing()
 
 set(TEXT_TEST_DRIVER ${CMAKE_CURRENT_SOURCE_DIR}/cmake/RunTextCompareTest.cmake)
+set(CODEGEN_TEST_DRIVER ${CMAKE_CURRENT_SOURCE_DIR}/cmake/RunCodegenTest.cmake)
 
 function(add_lexer_positive_test name)
     add_test(
@@ -153,6 +176,20 @@ function(add_sema_negative_test name)
     set_tests_properties(sema_negative_${name} PROPERTIES LABELS "sema;negative")
 endfunction()
 
+function(add_codegen_positive_test name)
+    add_test(
+        NAME codegen_positive_${name}
+        COMMAND ${CMAKE_COMMAND}
+            -DNOVA_COMPILE=$<TARGET_FILE:nova_compile>
+            -DINPUT=${CMAKE_CURRENT_SOURCE_DIR}/tests/codegen/positive/${name}.nv
+            -DEXPECT=${CMAKE_CURRENT_SOURCE_DIR}/tests/codegen/positive/${name}.out
+            -DRUNTIME_DIR=${CMAKE_CURRENT_SOURCE_DIR}/runtime
+            -DCC=cc
+            -P ${CODEGEN_TEST_DRIVER}
+    )
+    set_tests_properties(codegen_positive_${name} PROPERTIES LABELS "codegen;positive")
+endfunction()
+
 
 add_lexer_positive_test(single_tokens)
 add_lexer_positive_test(keywords_and_identifiers)
@@ -210,3 +247,11 @@ add_sema_negative_test(return_type_mismatch)
 add_sema_negative_test(function_argument_count_mismatch)
 add_sema_negative_test(function_argument_type_mismatch)
 add_sema_negative_test(call_unknown_function)
+
+add_codegen_positive_test(helloworld)
+add_codegen_positive_test(arithmetic)
+add_codegen_positive_test(function_call)
+add_codegen_positive_test(recursion)
+add_codegen_positive_test(loop)
+add_codegen_positive_test(string_concat)
+add_codegen_positive_test(nested_block_shadowing)
