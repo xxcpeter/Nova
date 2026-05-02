@@ -1,0 +1,5 @@
+fn main() : void {
+    let s : str = str_concat("answer=", int_to_str(42));
+    print_str(s);
+    return;
+}

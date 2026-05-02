@@ -1,0 +1,7 @@
+fn main() : void {
+    let s : str = "nova";
+    print_int(str_len(s));
+    print_int(str_get(s, 0));
+    print_int(str_get(s, 3));
+    return;
+}

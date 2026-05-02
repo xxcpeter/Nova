@@ -1,0 +1,12 @@
+fn main() : void {
+    let a : int = buf_new();
+    let b : int = buf_new();
+
+    buf_push_str(a, "left");
+    buf_push_str(b, "right");
+
+    print_str(buf_to_str(a));
+    print_str(buf_to_str(b));
+
+    return;
+}

@@ -1,0 +1,14 @@
+fn main() : void {
+    let v : int = str_vec_new();
+
+    str_vec_push(v, "red");
+    str_vec_push(v, "green");
+    str_vec_push(v, "blue");
+
+    print_int(str_vec_len(v));
+    print_str(str_vec_get(v, 0));
+    print_str(str_vec_get(v, 1));
+    print_str(str_vec_get(v, 2));
+
+    return;
+}

@@ -1,0 +1,6 @@
+fn main() : void {
+    write_file("nova_step6_tmp.txt", "hello file");
+    let s : str = read_file("nova_step6_tmp.txt");
+    print_str(s);
+    return;
+}

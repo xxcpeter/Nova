@@ -1,0 +1,9 @@
+fn main() : void {
+    let v : int = str_vec_new();
+    print_int(str_vec_len(v));
+
+    str_vec_push(v, "x");
+    print_int(str_vec_len(v));
+
+    return;
+}

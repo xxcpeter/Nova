@@ -1,0 +1,15 @@
+fn main() : void {
+    let s : str = "hello nova";
+    if (str_starts_with(s, "hello")) {
+        print_str("starts");
+    } else {
+        print_str("no");
+    }
+
+    if (str_contains(s, "nova")) {
+        print_str("contains");
+    } else {
+        print_str("no");
+    }
+    return;
+}

@@ -1,0 +1,19 @@
+fn main() : void {
+    let v : int = str_vec_new();
+
+    str_vec_push(v, "fn");
+    str_vec_push(v, " ");
+    str_vec_push(v, "main");
+    str_vec_push(v, "()");
+
+    let b : int = buf_new();
+    let i : int = 0;
+
+    while (i < str_vec_len(v)) {
+        buf_push_str(b, str_vec_get(v, i));
+        i = i + 1;
+    }
+
+    print_str(buf_to_str(b));
+    return;
+}

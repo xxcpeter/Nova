@@ -1,0 +1,5 @@
+fn main() : void {
+    let s : str = "hello nova";
+    print_str(str_slice(s, 6, 10));
+    return;
+}
