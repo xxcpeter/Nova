@@ -13,6 +13,9 @@ static int str_vec_count = 0;
 static char** str_vecs[MAX_STR_VECS];
 static int str_vec_lengths[MAX_STR_VECS];
 
+static int rt_argc;
+static char** rt_argv;
+
 
 static void runtime_error(const char* message) {
     fprintf(stderr, "Nova runtime error: %s\n", message);
@@ -46,6 +49,19 @@ static char* rt_strdup(const char* s) {
     memcpy(copy, s, len + 1);
     return copy;
 }
+
+
+static void check_buffer_id(int buf) {
+    if (buf < 0 || buf >= buffer_count || !buffers[buf]) {
+        runtime_error("invalid buffer handle");
+    }
+}
+
+static void check_str_vec_id(int vec) {
+    if (vec < 0 || vec >= str_vec_count || !str_vecs[vec]) {
+        runtime_error("invalid string vector handle");
+    }
+}
     
     
 void print_int(int x) {
@@ -63,7 +79,7 @@ bool str_eq(const char* a, const char* b) {
 }
 
 
-char* str_concat(const char* a, const char* b) {
+const char* str_concat(const char* a, const char* b) {
     size_t len_a = strlen(a);
     size_t len_b = strlen(b);
     char* result = rt_malloc(len_a + len_b + 1);
@@ -86,7 +102,7 @@ int str_get(const char* s, int index) {
 }
 
 
-char* str_slice(const char* s, int start, int end) {
+const char* str_slice(const char* s, int start, int end) {
     if (start < 0 || end > strlen(s) || start > end) {
         runtime_error("invalid string slice indices");
     }
@@ -108,25 +124,38 @@ bool str_contains(const char* s, const char* needle) {
 }
 
 
-char* int_to_str(int x) {
+const char* int_to_str(int x) {
     char* result = rt_malloc(12); // Enough for a 32-bit integer
     snprintf(result, 12, "%d", x);
     return result;
 }
 
 
-char* read_file(const char* path) {
+const char* read_file(const char* path) {
     FILE* file = fopen(path, "r");
     if (!file) {
         runtime_error("failed to open file");
     }
+
     if (fseek(file, 0, SEEK_END) != 0) {
         runtime_error("failed to seek file");
     }
+
     long length = ftell(file);
-    fseek(file, 0, SEEK_SET);
+    if (length < 0) {
+        runtime_error("failed to tell file size");
+    }
+
+    if (fseek(file, 0, SEEK_SET) != 0) {
+        runtime_error("failed to seek file");
+    }
+
     char* content = rt_malloc(length + 1);
     fread(content, 1, length, file);
+    if (strlen(content) != length) {
+        runtime_error("failed to read entire file");
+    }
+
     content[length] = '\0';
     fclose(file);
     return content;
@@ -138,8 +167,14 @@ void write_file(const char* path, const char* content) {
     if (!file) {
         runtime_error("failed to open file");
     }
-    fprintf(file, "%s", content);
-    fclose(file);
+    
+    if (fprintf(file, "%s", content) < 0) {
+        runtime_error("failed to write file");
+    }
+    
+    if (fclose(file) != 0) {
+        runtime_error("failed to close file");
+    }
 }
 
 
@@ -155,19 +190,22 @@ int buf_new() {
 
 
 void buf_push_str(int buf, const char* s) {
+    check_buffer_id(buf);
     buffers[buf] = rt_realloc(buffers[buf], strlen(buffers[buf]) + strlen(s) + 1);
     strcat(buffers[buf], s);
 }
 
 
 void buf_push_int(int buf, int x) {
-    char* s = int_to_str(x);
+    check_buffer_id(buf);
+    char s[12]; // Enough for a 32-bit integer
+    snprintf(s, 12, "%d", x);
     buf_push_str(buf, s);
-    free(s);
 }
 
 
-char* buf_to_str(int buf) {
+const char* buf_to_str(int buf) {
+    check_buffer_id(buf);
     return buffers[buf];
 }
 
@@ -183,6 +221,7 @@ int str_vec_new() {
 
 
 void str_vec_push(int vec, const char* s) {
+    check_str_vec_id(vec);
     int len = str_vec_len(vec);
     str_vecs[vec] = rt_realloc(str_vecs[vec], (len + 1) * sizeof(char*));
     str_vecs[vec][len] = rt_strdup(s);
@@ -190,7 +229,8 @@ void str_vec_push(int vec, const char* s) {
 }
 
 
-char* str_vec_get(int vec, int index) {
+const char* str_vec_get(int vec, int index) {
+    check_str_vec_id(vec);
     if (index < 0 || index >= str_vec_len(vec)) {
         runtime_error("string vector index out of bounds");
     }
@@ -199,5 +239,30 @@ char* str_vec_get(int vec, int index) {
 
 
 int str_vec_len(int vec) {
+    check_str_vec_id(vec);
     return str_vec_lengths[vec];
+}
+
+
+int arg_count() {
+    return rt_argc;
+}
+
+
+const char* arg_get(int index) {
+    if (index < 0 || index >= arg_count()) {
+        runtime_error("argument index out of bounds");
+    }
+    return rt_argv[index];
+}
+
+    
+void nova_runtime_init(int argc, char** argv) {
+    rt_argc = argc;
+    rt_argv = argv;
+}
+
+void exit_with_error(const char *message)
+{
+    runtime_error(message);
 }

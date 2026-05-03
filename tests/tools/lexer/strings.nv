@@ -1,0 +1,6 @@
+fn main() : void {
+    print_str("hello");
+    print_str("a\\n");
+    print_str("a\\\"");
+    return;
+}

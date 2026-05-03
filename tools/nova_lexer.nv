@@ -1,0 +1,307 @@
+fn is_digit (c : int) : bool {
+    return c >= 48 && c <= 57;
+}
+
+
+fn is_alpha (c : int) : bool {
+    return (c >= 65 && c <= 90) || (c >= 97 && c <= 122);
+}
+
+
+fn is_alnum (c : int) : bool {
+    return is_alpha(c) || is_digit(c);
+}
+
+
+fn is_ident_start (c : int) : bool {
+    return is_alpha(c) || c == 95; // underscore
+}
+
+
+fn is_ident_continue (c : int) : bool {
+    return is_alnum(c) || c == 95; // underscore
+}
+
+
+fn is_whitespace (c : int) : bool {
+    return c == 32 || c == 9 || c == 10 || c == 13; // space, tab, newline, carriage return
+}
+
+
+fn peek_str (source : str, pos : int) : int {
+    if (pos >= str_len(source)) {
+        return 0; // null character to indicate EOF
+    }
+    return str_get(source, pos);
+}
+
+
+fn skip_whitespace_and_comment (source : str, pos : int) : int {
+    while (pos < str_len(source)) {
+        let c : int = peek_str(source, pos);
+        if (is_whitespace(c)) {
+            pos = pos + 1;
+        } else if (c == 47) { // '/'
+            if (peek_str(source, pos + 1) == 47) { // '//'
+                pos = pos + 2;
+                while (pos < str_len(source) && peek_str(source, pos) != 10) { // until newline
+                    pos = pos + 1;
+                }
+            } else if (peek_str(source, pos + 1) == 42) { // '/*'
+                pos = pos + 2;
+                while (!(peek_str(source, pos) == 42 && peek_str(source, pos + 1) == 47)) { // until '*/'
+                    if (pos >= str_len(source)) {
+                        return -1; // EOF in comment
+                    }
+                    pos = pos + 1;
+                }
+                pos = pos + 2; // skip '*/'
+            } else {
+                return pos;
+            }
+        } else {
+            return pos;
+        }
+    }
+    return pos;
+}
+
+
+fn read_str (source : str, pos : int) : str {
+    let start : int = pos;
+    pos = pos + 1; // skip opening quote
+    while (peek_str(source, pos) != 34) { // until closing quote
+        if (pos >= str_len(source) || peek_str(source, pos) == 10) { // newline or EOF in string
+            return "unterminated string literal"; // EOF in string
+        }
+        if (peek_str(source, pos) == 92) { // backslash
+            pos = pos + 1; // skip escape sequence
+            if (pos >= str_len(source) || peek_str(source, pos) == 10) { // newline or EOF in string
+                return "unterminated string literal"; // EOF in string
+            }
+            pos = pos + 1;
+        } else {
+            pos = pos + 1;
+        }
+    }
+    return str_slice(source, start, pos + 1);
+}
+
+
+fn read_ident (source : str, pos : int) : str {
+    let start : int = pos;
+    while (is_ident_continue(peek_str(source, pos))) {
+        pos = pos + 1;
+    }
+    return str_slice(source, start, pos);
+}
+
+
+fn read_number (source : str, pos : int) : str {
+    let start : int = pos;
+    while (is_digit(peek_str(source, pos))) {
+        pos = pos + 1;
+    }
+    if (is_ident_start(peek_str(source, pos))) {
+        exit_with_error("lexer error: invalid number literal");
+    }
+    return str_slice(source, start, pos);
+}
+
+
+fn read_symbol (source : str, pos : int) : str {
+    let c : int = peek_str(source, pos);
+    if (c == 61) { // '='
+        if (peek_str(source, pos + 1) == 61) { // '=='
+            return "==";
+        } else {
+            return "=";
+        }
+    } else if (c == 33) { // '!'
+        if (peek_str(source, pos + 1) == 61) { // '!='
+            return "!=";
+        } else {
+            return "!";
+        }
+    } else if (c == 60) { // '<'
+        if (peek_str(source, pos + 1) == 61) { // '<='
+            return "<=";
+        } else {
+            return "<";
+        }
+    } else if (c == 62) { // '>'
+        if (peek_str(source, pos + 1) == 61) { // '>='
+            return ">=";
+        } else {
+            return ">";
+        }
+    } else if (c == 38) { // '&'
+        if (peek_str(source, pos + 1) == 38) { // '&&'
+            return "&&";
+        } else {
+            return "&";
+        }
+    } else if (c == 124) { // '|'
+        if (peek_str(source, pos + 1) == 124) { // '||'
+            return "||";
+        } else {
+            return "|";
+        }
+    } else {
+        return str_slice(source, pos, pos + 1);
+    }
+}
+
+
+fn next_token (source : str, pos : int) : str {
+    let c : int = peek_str(source, pos);
+    if (c == 0) {
+        return "\0"; // EndOfFile token
+    } else if (c == 34) { // '"'
+        return read_str(source, pos);
+    } else if (is_ident_start(c)) {
+        return read_ident(source, pos);
+    } else if (is_digit(c)) {
+        return read_number(source, pos);
+    } else {
+        return read_symbol(source, pos);
+    }
+}
+
+
+fn classify_token (lexeme : str) : str {
+    if (str_eq(lexeme, "fn")) {
+        return "KW_FN";
+    } else if (str_eq(lexeme, "let")) {
+        return "KW_LET";
+    } else if (str_eq(lexeme, "if")) {
+        return "KW_IF";
+    } else if (str_eq(lexeme, "else")) {
+        return "KW_ELSE";
+    } else if (str_eq(lexeme, "while")) {
+        return "KW_WHILE";
+    } else if (str_eq(lexeme, "return")) {
+        return "KW_RETURN";
+    } else if (str_eq(lexeme, "true")) {
+        return "KW_TRUE";
+    } else if (str_eq(lexeme, "false")) {
+        return "KW_FALSE";
+    } else if (str_eq(lexeme, "int")) {
+        return "KW_INT";
+    } else if (str_eq(lexeme, "bool")) {
+        return "KW_BOOL";
+    } else if (str_eq(lexeme, "str")) {
+        return "KW_STR";
+    } else if (str_eq(lexeme, "void")) {
+        return "KW_VOID";
+    } else if (str_eq(lexeme, "+")) {
+        return "PLUS";
+    } else if (str_eq(lexeme, "-")) {
+        return "MINUS";
+    } else if (str_eq(lexeme, "*")) {
+        return "STAR";
+    } else if (str_eq(lexeme, "/")) {
+        return "SLASH";
+    } else if (str_eq(lexeme, "%")) {
+        return "PERCENT";
+    } else if (str_eq(lexeme, "=")) {
+        return "ASSIGN";
+    } else if (str_eq(lexeme, "==")) {
+        return "EQ_EQ";
+    } else if (str_eq(lexeme, "!=")) {
+        return "BANG_EQ";
+    } else if (str_eq(lexeme, "<")) {
+        return "LT";
+    } else if (str_eq(lexeme, "<=")) {
+        return "LE";
+    } else if (str_eq(lexeme, ">")) {
+        return "GT";
+    } else if (str_eq(lexeme, ">=")) {
+        return "GE";
+    } else if (str_eq(lexeme, "&&")) {
+        return "AND_AND";
+    } else if (str_eq(lexeme, "||")) {
+        return "OR_OR";
+    } else if (str_eq(lexeme, "!")) {
+        return "BANG";
+    } else if (str_eq(lexeme, "(")) {
+        return "LPAREN";
+    } else if (str_eq(lexeme, ")")) {
+        return "RPAREN";
+    } else if (str_eq(lexeme, "{")) {
+        return "LBRACE";
+    } else if (str_eq(lexeme, "}")) {
+        return "RBRACE";
+    } else if (str_eq(lexeme, ",")) {
+        return "COMMA";
+    } else if (str_eq(lexeme, ";")) {
+        return "SEMIC";
+    } else if (str_eq(lexeme, ":")) {
+        return "COLON";
+    } else if (str_eq(lexeme, "\0")) {
+        return "EndOfFile";
+    } else if (is_ident_start(peek_str(lexeme, 0))) {
+        return "IDENT";
+    } else if (is_digit(peek_str(lexeme, 0))) {
+        return "INT_LITERAL";
+    } else if (str_starts_with(lexeme, "\"")) {
+        return "STR_LITERAL";
+    } else {
+        exit_with_error(str_concat(str_concat("lexer error: unrecognized token '", lexeme), "'"));
+        return "INVALID";
+    }
+}
+
+
+fn emit_token (out : int, kind : str, lexeme : str, line : int, col : int) : void {
+    buf_push_str(out, kind);
+    buf_push_str(out, "(\"");
+    buf_push_str(out, lexeme);
+    buf_push_str(out, "\") at ");
+    buf_push_int(out, line);
+    buf_push_str(out, ":");
+    buf_push_int(out, col);
+    buf_push_str(out, "\n");
+}
+
+
+fn main () : void {
+    if (arg_count() != 3) {
+        print_str("Usage: nova_lexer <input.nv> <output.tok>");
+        return;
+    }
+
+    let input : str = arg_get(1);
+    let output : str = arg_get(2);
+    let source : str = read_file(input);
+    let out : int = buf_new();
+    let pos : int = 0;
+    let line : int = 1;
+    let col : int = 1;
+
+    while (pos < str_len(source)) {
+        let new_pos : int = skip_whitespace_and_comment(source, pos);
+        if (new_pos == -1) {
+            exit_with_error("lexer error: unterminated comment block");
+        }
+        while (pos < new_pos) {
+            if (peek_str(source, pos) == 10) { // newline
+                line = line + 1;
+                col = 1;
+            } else {
+                col = col + 1;
+            }
+            pos = pos + 1;
+        }
+        if (pos < str_len(source)) {
+            let lexeme : str = next_token(source, pos);
+            let kind : str = classify_token(lexeme);
+            emit_token(out, kind, lexeme, line, col);
+            pos = pos + str_len(lexeme);
+            col = col + str_len(lexeme);
+        }
+    }
+    emit_token(out, "EndOfFile", "", line, col);
+    write_file(output, buf_to_str(out));
+    return;
+}

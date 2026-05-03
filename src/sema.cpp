@@ -42,6 +42,11 @@ void SemanticAnalyzer::install_builtin_functions() {
     functions_.emplace("str_vec_push", FunctionSignature{"str_vec_push", {TypeKind::Int, TypeKind::Str}, TypeKind::Void, SourceLocation{0, 0}});
     functions_.emplace("str_vec_get", FunctionSignature{"str_vec_get", {TypeKind::Int, TypeKind::Int}, TypeKind::Str, SourceLocation{0, 0}});
     functions_.emplace("str_vec_len", FunctionSignature{"str_vec_len", {TypeKind::Int}, TypeKind::Int, SourceLocation{0, 0}});
+
+    functions_.emplace("arg_count", FunctionSignature{"arg_count", {}, TypeKind::Int, SourceLocation{0, 0}});
+    functions_.emplace("arg_get", FunctionSignature{"arg_get", {TypeKind::Int}, TypeKind::Str, SourceLocation{0, 0}});
+
+    functions_.emplace("exit_with_error", FunctionSignature{"exit_with_error", {TypeKind::Str}, TypeKind::Void, SourceLocation{0, 0}});
 }
 
 

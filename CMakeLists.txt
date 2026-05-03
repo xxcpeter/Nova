@@ -93,6 +93,7 @@ enable_testing()
 
 set(TEXT_TEST_DRIVER ${CMAKE_CURRENT_SOURCE_DIR}/cmake/RunTextCompareTest.cmake)
 set(CODEGEN_TEST_DRIVER ${CMAKE_CURRENT_SOURCE_DIR}/cmake/RunCodegenTest.cmake)
+set(NOVA_TOOL_TEST_DRIVER ${CMAKE_CURRENT_SOURCE_DIR}/cmake/RunNovaToolTest.cmake)
 
 function(add_lexer_positive_test name)
     add_test(
@@ -190,6 +191,22 @@ function(add_codegen_positive_test name)
     set_tests_properties(codegen_positive_${name} PROPERTIES LABELS "codegen;positive")
 endfunction()
 
+function(add_nova_lexer_tool_test name)
+    add_test(
+        NAME nova_tool_lexer_${name}
+        COMMAND ${CMAKE_COMMAND}
+            -DNOVA_COMPILE=$<TARGET_FILE:nova_compile>
+            -DTOOL_SOURCE=${CMAKE_CURRENT_SOURCE_DIR}/tools/nova_lexer.nv
+            -DINPUT=${CMAKE_CURRENT_SOURCE_DIR}/tests/tools/lexer/${name}.nv
+            -DEXPECT=${CMAKE_CURRENT_SOURCE_DIR}/tests/tools/lexer/${name}.tok
+            -DRUNTIME_DIR=${CMAKE_CURRENT_SOURCE_DIR}/runtime
+            -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/nova_tool_tests/lexer_${name}
+            -DCC=cc
+            -P ${NOVA_TOOL_TEST_DRIVER}
+    )
+    set_tests_properties(nova_tool_lexer_${name} PROPERTIES LABELS "nova_tool;lexer")
+endfunction()
+
 
 add_lexer_positive_test(single_tokens)
 add_lexer_positive_test(keywords_and_identifiers)
@@ -267,3 +284,10 @@ add_codegen_positive_test(str_vec_basic)
 add_codegen_positive_test(str_vec_two_vectors)
 add_codegen_positive_test(str_vec_empty_len)
 add_codegen_positive_test(str_vec_with_buffer)
+
+add_nova_lexer_tool_test(basic)
+add_nova_lexer_tool_test(expressions)
+add_nova_lexer_tool_test(strings)
+add_nova_lexer_tool_test(comments)
+add_nova_lexer_tool_test(operators)
+add_nova_lexer_tool_test(block_comment_inline)

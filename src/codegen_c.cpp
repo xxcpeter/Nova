@@ -63,7 +63,8 @@ void CCodeGenerator::gen_program(const Program& program) {
 void CCodeGenerator::gen_function(const FunctionDecl& function) {
     current_function_name_ = function.name;
     if (function.name == "main") {
-        emit_line("int main(void) {");
+        emit_line("int main(int argc, char** argv) {");
+        emit_line("    nova_runtime_init(argc, argv);");
     } else {
         std::string params;
         for (const auto& param : function.params) {
