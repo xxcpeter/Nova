@@ -27,6 +27,7 @@ enum class TokenType {
     KW_BOOL,
     KW_STR,
     KW_VOID,
+    KW_STRUCT,
 
     // operators
     PLUS,
@@ -57,6 +58,7 @@ enum class TokenType {
     COMMA,
     SEMIC,
     COLON,
+    DOT,
 };
 
 

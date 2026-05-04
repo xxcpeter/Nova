@@ -51,6 +51,7 @@ private:
         {"bool",    KW_BOOL},
         {"str",     KW_STR},
         {"void",    KW_VOID},
+        {"struct",  KW_STRUCT},
     };
 
     static inline const std::unordered_map<std::string_view, TokenType> oper_puncs = {
@@ -76,6 +77,7 @@ private:
         {",",       COMMA},
         {";",       SEMIC},
         {":",       COLON},
+        {".",       DOT},
     };
 };
 

@@ -1,0 +1,1 @@
+SemanticError at 2:5: field 'x' in struct 'Bad' cannot have void type

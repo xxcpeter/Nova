@@ -1,0 +1,11 @@
+struct Point {
+    x: int;
+    y: int;
+}
+
+fn main() : void {
+    let p : Point = Point { x: 3, y: 4 };
+    print_int(p.x);
+    print_int(p.y);
+    return;
+}

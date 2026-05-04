@@ -1,0 +1,1 @@
+SemanticError at 7:35: duplicate field 'x' in struct literal 'Point'

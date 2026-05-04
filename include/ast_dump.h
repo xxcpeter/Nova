@@ -16,6 +16,9 @@ public:
     void visit(const Program& program) override {
         os << std::string(indent_, ' ') << "Program name=" << program.name << "\n";
         indent_ += 2;
+        for (const auto& struct_decl : program.structs) {
+            struct_decl->accept(*this);
+        }
         for (const auto& func : program.functions) {
             func->accept(*this);
         }
@@ -26,14 +29,25 @@ public:
         indent_ += 4;
         os << std::string(indent_ - 2, ' ') << "Params\n";
         for (const auto& param : func.params) {
-            os << std::string(indent_, ' ') << "ParamDecl name=" << param.name << " type=" << type_to_string(param.type) << "\n";
+            param.accept(*this);
         }
         os << std::string(indent_ - 2, ' ') << "Body\n";
         func.body->accept(*this);
         indent_ -= 4;
     }
 
-    void visit(const ParamDecl& param) override {};
+    void visit(const ParamField& param) override {
+        os << std::string(indent_, ' ') << "ParamField name=" << param.name << " type=" << type_to_string(param.type) << "\n";
+    }
+
+    void visit(const StructDecl& struct_decl) override {
+        os << std::string(indent_, ' ') << "StructDecl name=" << struct_decl.name << "\n";
+        indent_ += 2;
+        for (const auto& field : struct_decl.fields) {
+            os << std::string(indent_, ' ') << "StructField name=" << field.name << " type=" << type_to_string(field.type) << "\n";
+        }
+        indent_ -= 2;
+    }
 
     void visit(const BlockStmt& block) override {
         os << std::string(indent_, ' ') << "BlockStmt\n";
@@ -141,5 +155,24 @@ public:
 
     void visit(const StrLiteralExpr& expr) override {
         os << std::string(indent_, ' ') << "StringLiteralExpr lexeme=" << std::quoted(expr.lexeme) << "\n";
+    }
+
+    void visit(const StructLiteralExpr& expr) override {
+        os << std::string(indent_, ' ') << "StructLiteralExpr name=" << expr.name << "\n";
+        indent_ += 2;
+        for (const auto& initializer : expr.field_initializers) {
+            os << std::string(indent_, ' ') << "FieldInitializer name=" << initializer.name << "\n";
+            indent_ += 2;
+            initializer.value->accept(*this);
+            indent_ -= 2;
+        }
+        indent_ -= 2;
+    }
+
+    void visit(const FieldAccessExpr& expr) override {
+        os << std::string(indent_, ' ') << "FieldAccessExpr field_name=" << expr.field_name << "\n";
+        indent_ += 2;
+        expr.object->accept(*this);
+        indent_ -= 2;
     }
 };

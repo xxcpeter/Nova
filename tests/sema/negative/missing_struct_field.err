@@ -1,0 +1,1 @@
+SemanticError at 7:21: missing field 'y' in struct literal 'Point'

@@ -1,0 +1,11 @@
+struct Point {
+    x: int;
+}
+
+struct Point {
+    y: int;
+}
+
+fn main() : void {
+    return;
+}

@@ -1,0 +1,1 @@
+SemanticError at 6:35: unknown field 'y' in struct 'Point'

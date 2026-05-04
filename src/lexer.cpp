@@ -176,6 +176,7 @@ Token Lexer::lex_operator_or_punc() {
         case ',': advance(); return Token{ COMMA, ","s, location };
         case ';': advance(); return Token{ SEMIC, ";"s, location };
         case ':': advance(); return Token{ COLON, ":"s, location };
+        case '.': advance(); return Token{ DOT, "."s, location };
         default: throw LexError(std::format("Unexpected operator '{}'", curr), location);
     }
 }

@@ -1,0 +1,19 @@
+struct Token {
+    kind: int;
+    lexeme: str;
+    line: int;
+    column: int;
+}
+
+fn make_token(kind: int, lexeme: str, line: int, column: int) : Token {
+    return Token { kind: kind, lexeme: lexeme, line: line, column: column };
+}
+
+fn main() : void {
+    let t : Token = make_token(1, "fn", 2, 3);
+    print_int(t.kind);
+    print_str(t.lexeme);
+    print_int(t.line);
+    print_int(t.column);
+    return;
+}

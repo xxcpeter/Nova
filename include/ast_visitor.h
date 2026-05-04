@@ -3,7 +3,8 @@
 
 struct Program;
 struct FunctionDecl;
-struct ParamDecl;
+struct ParamField;
+struct StructDecl;
 
 struct BlockStmt;
 struct LetStmt;
@@ -20,6 +21,8 @@ struct IdentifierExpr;
 struct IntLiteralExpr;
 struct BoolLiteralExpr;
 struct StrLiteralExpr;
+struct StructLiteralExpr;
+struct FieldAccessExpr;
 
 
 struct ASTVisitor {
@@ -27,7 +30,8 @@ struct ASTVisitor {
 
     virtual void visit(const Program&) = 0;
     virtual void visit(const FunctionDecl&) = 0;
-    virtual void visit(const ParamDecl&) = 0;
+    virtual void visit(const ParamField&) = 0;
+    virtual void visit(const StructDecl&) = 0;
 
     virtual void visit(const BlockStmt&) = 0;
     virtual void visit(const LetStmt&) = 0;
@@ -44,4 +48,6 @@ struct ASTVisitor {
     virtual void visit(const IntLiteralExpr&) = 0;
     virtual void visit(const BoolLiteralExpr&) = 0;
     virtual void visit(const StrLiteralExpr&) = 0;
+    virtual void visit(const StructLiteralExpr&) = 0;
+    virtual void visit(const FieldAccessExpr&) = 0;
 };

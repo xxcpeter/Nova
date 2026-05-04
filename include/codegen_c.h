@@ -20,9 +20,10 @@ private:
     void indent();
     void dedent();
 
-    std::string c_type(TypeKind type);
+    std::string c_type(Type type);
 
     void gen_program(const Program& program);
+    void gen_struct_decl(const StructDecl& struct_decl);
     void gen_function(const FunctionDecl& function);
     void gen_block_contents(const BlockStmt& block);
     void gen_block_stmt(const BlockStmt& block);
@@ -42,4 +43,6 @@ private:
     std::string gen_literal_expr(const IntLiteralExpr& expr);
     std::string gen_literal_expr(const StrLiteralExpr& expr);
     std::string gen_literal_expr(const BoolLiteralExpr& expr);
+    std::string gen_literal_expr(const StructLiteralExpr& expr);
+    std::string gen_field_access_expr(const FieldAccessExpr& expr);
 };

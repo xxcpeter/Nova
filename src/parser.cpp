@@ -107,11 +107,18 @@ std::unique_ptr<Program> Parser::parse_program() {
     std::string name(source_name_);
     SourceLocation location = peek().location;
     std::vector<std::unique_ptr<FunctionDecl>> functions;
+    std::vector<std::unique_ptr<StructDecl>> structs;
     while (!is_at_end()) {
-        functions.push_back(parse_function());
+        if (check(TokenType::KW_STRUCT)) {
+            structs.push_back(parse_struct());
+        } else if (check(TokenType::KW_FN)) {
+            functions.push_back(parse_function());
+        } else {
+            throw ParseError("expected function or struct declaration", peek().location);
+        }
     }
     return std::make_unique<Program>(
-        std::move(name), std::move(functions), location);
+        std::move(name), std::move(functions), std::move(structs), location);
 }
 
 
@@ -120,10 +127,10 @@ std::unique_ptr<FunctionDecl> Parser::parse_function() {
     expect(TokenType::KW_FN, "expected 'fn' at the beginning of a function");
     std::string name = expect(TokenType::IDENT, "expected function name").lexeme;
     expect(TokenType::LPAREN, "expected '(' after function name");
-    std::vector<ParamDecl> params = parse_param_list();
+    std::vector<ParamField> params = parse_param_list();
     expect(TokenType::RPAREN, "expected ')' after parameter list");
     expect(TokenType::COLON, "expected ':' before return type");
-    TypeKind return_type = parse_type();
+    Type return_type = parse_type();
     expect(TokenType::LBRACE, "expected '{' at the beginning of function body");
     std::unique_ptr<BlockStmt> body = parse_block();
     return std::make_unique<FunctionDecl>(
@@ -131,27 +138,58 @@ std::unique_ptr<FunctionDecl> Parser::parse_function() {
 }
 
 
-std::vector<ParamDecl> Parser::parse_param_list() {
-    std::vector<ParamDecl> params;
+std::vector<ParamField> Parser::parse_param_list() {
+    std::vector<ParamField> params;
     if (check(TokenType::RPAREN)) return params;
     
     do {
         SourceLocation location = peek().location;
         std::string name = expect(TokenType::IDENT, "expected parameter name").lexeme;
         expect(TokenType::COLON, "expected ':' after parameter name");
-        TypeKind type = parse_type();
-        params.push_back(ParamDecl(std::move(name), type, location));
+        Type type = parse_type();
+        params.push_back(ParamField(std::move(name), type, location));
     } while (match(TokenType::COMMA));
     
     return params;
 }
 
 
-TypeKind Parser::parse_type() {
-    if (match(TokenType::KW_INT)) return TypeKind::Int;
-    if (match(TokenType::KW_BOOL)) return TypeKind::Bool;
-    if (match(TokenType::KW_STR)) return TypeKind::Str;
-    if (match(TokenType::KW_VOID)) return TypeKind::Void;
+std::unique_ptr<StructDecl> Parser::parse_struct() {
+    SourceLocation location = peek().location;
+    expect(TokenType::KW_STRUCT, "expected 'struct' at the beginning of a struct declaration");
+    std::string name = expect(TokenType::IDENT, "expected struct name").lexeme;
+    expect(TokenType::LBRACE, "expected '{' at the beginning of struct body");
+    
+    std::vector<StructField> fields;
+    while (!check(TokenType::RBRACE) && !is_at_end()) {
+        fields.push_back(parse_struct_field());
+    }
+    expect(TokenType::RBRACE, "expected '}' at the end of struct body");
+
+    return std::make_unique<StructDecl>(std::move(name), std::move(fields), location);
+}
+
+
+StructField Parser::parse_struct_field() {
+    SourceLocation location = peek().location;
+    std::string name = expect(TokenType::IDENT, "expected field name").lexeme;
+    expect(TokenType::COLON, "expected ':' after field name");
+    SourceLocation type_location = peek().location;
+    Type type = parse_type();
+    expect(TokenType::SEMIC, "expected ';' after struct field declaration");
+    return StructField(std::move(name), type, location, type_location);
+}
+
+
+Type Parser::parse_type() {
+    if (match(TokenType::KW_INT)) return Type(TypeKind::Int);
+    if (match(TokenType::KW_BOOL)) return Type(TypeKind::Bool);
+    if (match(TokenType::KW_STR)) return Type(TypeKind::Str);
+    if (match(TokenType::KW_VOID)) return Type(TypeKind::Void);
+    if (check(TokenType::IDENT)) {
+        std::string name = advance().lexeme;
+        return Type(TypeKind::Struct, std::move(name));
+    }
     throw ParseError("expected type after ':'", peek().location);
 }
 
@@ -186,13 +224,14 @@ std::unique_ptr<Stmt> Parser::parse_let_stmt() {
     expect(TokenType::IDENT, "expected variable name");
     std::string name = previous().lexeme;
     expect(TokenType::COLON, "expected ':' after variable name");
-    TypeKind declared_type = parse_type();
+    SourceLocation type_location = peek().location;
+    Type declared_type = parse_type();
     expect(TokenType::ASSIGN, "expected '=' after variable type");
     std::unique_ptr<Expr> initializer = parse_required_expr("expected expression after '='");
     expect(TokenType::SEMIC, "expected ';' after variable declaration");
     
     return std::make_unique<LetStmt>(
-        std::move(name), declared_type, std::move(initializer), location, name_location);
+        std::move(name), declared_type, std::move(initializer), location, name_location, type_location);
 }
 
 
@@ -370,7 +409,20 @@ std::unique_ptr<Expr> Parser::parse_unary() {
         return std::make_unique<UnaryExpr>(
             unary_op, std::move(operand), op.location);
     }
-    return parse_primary();
+    return parse_postfix();
+}
+
+
+std::unique_ptr<Expr> Parser::parse_postfix() {
+    std::unique_ptr<Expr> expr = parse_primary();
+    while (match(TokenType::DOT)) {
+        SourceLocation location = previous().location;
+        std::string field_name = expect(TokenType::IDENT, "expected field name after '.'").lexeme;
+        SourceLocation field_location = previous().location;
+        expr = std::make_unique<FieldAccessExpr>(
+            std::move(expr), std::move(field_name), location, field_location);
+    }
+    return expr;
 }
 
 
@@ -383,7 +435,7 @@ std::unique_ptr<Expr> Parser::parse_primary() {
             value = std::stoll(token.lexeme);
         }
         catch(const std::exception& e) {
-            ParseError("integer literal out of range", token.location);
+            throw ParseError("integer literal out of range", token.location);
         }
         
         return std::make_unique<IntLiteralExpr>(std::move(value), location);
@@ -409,6 +461,23 @@ std::unique_ptr<Expr> Parser::parse_primary() {
 
     if (check(TokenType::IDENT)) {
         const Token& ident_token = advance();
+
+        if (match(TokenType::LBRACE)) {
+            std::string struct_name = ident_token.lexeme;
+            std::vector<StructLiteralField> field_initializers;
+            if (!check(TokenType::RBRACE)) {
+                do {
+                    SourceLocation field_location = peek().location;
+                    std::string field_name = expect(TokenType::IDENT, "expected field name in struct literal").lexeme;
+                    expect(TokenType::COLON, "expected ':' after field name in struct literal");
+                    std::unique_ptr<Expr> initializer = parse_required_expr("expected expression in struct literal");
+                    field_initializers.emplace_back(std::move(field_name), std::move(initializer), field_location);
+                } while (match(TokenType::COMMA));
+            }
+            expect(TokenType::RBRACE, "expected '}' after struct literal");
+            return std::make_unique<StructLiteralExpr>(
+                std::move(struct_name), std::move(field_initializers), ident_token.location);
+        }
 
         if (match(TokenType::LPAREN)) {
             SourceLocation location = ident_token.location;

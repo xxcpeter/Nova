@@ -35,12 +35,13 @@ void CCodeGenerator::dedent() {
 }
 
 
-std::string CCodeGenerator::c_type(TypeKind type) {
-    switch (type) {
+std::string CCodeGenerator::c_type(Type type) {
+    switch (type.kind) {
         case TypeKind::Int: return "int";
         case TypeKind::Str: return "const char*";
         case TypeKind::Void: return "void";
         case TypeKind::Bool: return "bool";
+        case TypeKind::Struct: return type.name;
     }
     throw std::runtime_error("Unknown type");
 }
@@ -53,10 +54,26 @@ void CCodeGenerator::gen_program(const Program& program) {
     emit_line("#include <stdbool.h>");
     emit_line("#include \"nova_runtime.h\"");
     emit_line();
+    for (const auto& struct_decl : program.structs) {
+        gen_struct_decl(*struct_decl);
+        emit_line();
+    }
     for (const auto& function : program.functions) {
         gen_function(*function);
         emit_line();
     }
+}
+
+
+void CCodeGenerator::gen_struct_decl(const StructDecl& struct_decl) {
+    emit_line("typedef struct " + struct_decl.name + " " + struct_decl.name + ";");
+    emit_line("struct {");
+    indent();
+    for (const auto& field : struct_decl.fields) {
+        emit_line(c_type(field.type) + " " + field.name + ";");
+    }
+    dedent();
+    emit_line("};");
 }
 
 
@@ -126,27 +143,18 @@ void CCodeGenerator::gen_let_stmt(const LetStmt& stmt) {
 
 
 void CCodeGenerator::gen_if_stmt(const IfStmt& stmt) {
-    emit_line("if (" + gen_expr(*stmt.condition) + ") {");
-    indent();
+    emit_line("if (" + gen_expr(*stmt.condition) + ") ");
     gen_stmt(*stmt.then_branch);
-    dedent();
-    emit_line("}");
     if (stmt.else_branch) {
-        emit_line("else {");
-        indent();
+        emit_line("else ");
         gen_stmt(*stmt.else_branch);
-        dedent();
-        emit_line("}");
     }
 }
 
 
 void CCodeGenerator::gen_while_stmt(const WhileStmt& stmt) {
-    emit_line("while (" + gen_expr(*stmt.condition) + ") {");
-    indent();
+    emit_line("while (" + gen_expr(*stmt.condition) + ") ");
     gen_stmt(*stmt.body);
-    dedent();
-    emit_line("}");
 }
 
 
@@ -178,6 +186,10 @@ std::string CCodeGenerator::gen_expr(const Expr& expr) {
         return gen_literal_expr(*str_literal_expr);
     } else if (auto bool_literal_expr = dynamic_cast<const BoolLiteralExpr*>(&expr)) {
         return gen_literal_expr(*bool_literal_expr);
+    } else if (auto struct_literal_expr = dynamic_cast<const StructLiteralExpr*>(&expr)) {
+        return gen_literal_expr(*struct_literal_expr);
+    } else if (auto field_access_expr = dynamic_cast<const FieldAccessExpr*>(&expr)) {
+        return gen_field_access_expr(*field_access_expr);
     } else {
         throw std::runtime_error("Unknown expression type");
     }
@@ -247,4 +259,22 @@ std::string CCodeGenerator::gen_literal_expr(const StrLiteralExpr& expr) {
 
 std::string CCodeGenerator::gen_literal_expr(const BoolLiteralExpr& expr) {
     return expr.value ? "true" : "false";
+}
+
+
+std::string CCodeGenerator::gen_literal_expr(const StructLiteralExpr& expr) {
+    std::string code = "((" + expr.name + "){";
+    for (const auto& initializer : expr.field_initializers) {
+        code += " ." + initializer.name + " = " + gen_expr(*initializer.value) + ",";
+    }
+    if (!expr.field_initializers.empty()) {
+        code.end()[-1] = ' '; // replace last comma with space
+    }
+    code += "})";
+    return code;
+}
+
+
+std::string CCodeGenerator::gen_field_access_expr(const FieldAccessExpr& expr) {
+    return "(" + gen_expr(*expr.object) + ")." + expr.field_name;
 }

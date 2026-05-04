@@ -34,8 +34,10 @@ private:
     std::unique_ptr<Expr> parse_required_expr(std::string_view message);
 
     std::unique_ptr<FunctionDecl> parse_function();
-    std::vector<ParamDecl> parse_param_list();
-    TypeKind parse_type();
+    std::vector<ParamField> parse_param_list();
+    std::unique_ptr<StructDecl> parse_struct();
+    StructField parse_struct_field();
+    Type parse_type();
 
     std::unique_ptr<Stmt> parse_statement();
     std::unique_ptr<BlockStmt> parse_block();
@@ -54,6 +56,7 @@ private:
     std::unique_ptr<Expr> parse_additive();
     std::unique_ptr<Expr> parse_multiplicative();
     std::unique_ptr<Expr> parse_unary();
+    std::unique_ptr<Expr> parse_postfix();
     std::unique_ptr<Expr> parse_primary();
 };
 

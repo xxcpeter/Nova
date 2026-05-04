@@ -3,13 +3,56 @@
 #include <string>
 
 
+void SemanticAnalyzer::collect_struct_declarations(const Program& program) {
+    // forward declare is not allowed
+    for (const auto& struct_decl : program.structs) {
+        if (structs_.contains(struct_decl->name)) {
+            throw SemaError(std::format("duplicate struct '{}'", struct_decl->name), struct_decl->location);
+        }
+        if (is_keyword(struct_decl->name)) {
+            throw SemaError(std::format("struct name '{}' cannot be a keyword", struct_decl->name), struct_decl->location);
+        }
+        StructInfo struct_info{ struct_decl->name, struct_decl->location, {}, {} };
+        for (const auto& field : struct_decl->fields) {
+            if (field.type.kind == TypeKind::Void) {
+                throw SemaError(std::format("field '{}' in struct '{}' cannot have void type", field.name, struct_decl->name), field.location);
+            }
+            if (field.type.kind == TypeKind::Struct && struct_decl->name == field.type.name) {
+                throw SemaError(std::format("struct '{}' cannot contain a field of its own type", struct_decl->name), field.type_location);
+            }
+            if (field.type.kind == TypeKind::Struct && !structs_.contains(field.type.name)) {
+                throw SemaError(std::format("unknown struct type '{}'", field.type.name), field.type_location);
+            }
+            if (struct_info.field_index.contains(field.name)) {
+                throw SemaError(std::format("duplicate field '{}' in struct '{}'", field.name, struct_decl->name), field.location);
+            }
+            struct_info.field_index.emplace(field.name, struct_info.fields.size());
+            struct_info.fields.push_back(FieldInfo{field.name, field.type, field.location});
+        }
+        structs_.emplace(struct_decl->name, std::move(struct_info));
+    }
+}
+
+
 void SemanticAnalyzer::collect_function_signatures(const Program& program) {
     for (const auto& func : program.functions) {
         if (functions_.contains(func->name)) {
             throw SemaError(std::format("duplicate function '{}'", func->name), func->location);
         }
-        std::vector<TypeKind> param_types;
+        if (is_keyword(func->name)) {
+            throw SemaError(std::format("function name '{}' cannot be a keyword", func->name), func->location);
+        }
+        if (func->return_type.kind == TypeKind::Struct && !structs_.contains(func->return_type.name)) {
+            throw SemaError(std::format("unknown struct type '{}'", func->return_type.name), func->location);
+        }
+        std::vector<Type> param_types;
         for (const auto& param : func->params) {
+            if (param.type.kind == TypeKind::Void) {
+                throw SemaError("parameter cannot have void type", param.location);
+            }
+            if (param.type.kind == TypeKind::Struct && !structs_.contains(param.type.name)) {
+                throw SemaError(std::format("unknown struct type '{}'", param.type.name), param.location);
+            }
             param_types.push_back(param.type);
         }
         functions_.emplace(func->name, FunctionSignature{func->name, param_types, func->return_type, func->location});
@@ -18,35 +61,35 @@ void SemanticAnalyzer::collect_function_signatures(const Program& program) {
 
 
 void SemanticAnalyzer::install_builtin_functions() {
-    functions_.emplace("print_int", FunctionSignature{"print_int", {TypeKind::Int}, TypeKind::Void, SourceLocation{0, 0}});
+    functions_.emplace("print_int", FunctionSignature{"print_int", {Type(TypeKind::Int)}, Type(TypeKind::Void), SourceLocation{0, 0}});
     
-    functions_.emplace("print_str", FunctionSignature{"print_str", {TypeKind::Str}, TypeKind::Void, SourceLocation{0, 0}});
-    functions_.emplace("str_eq", FunctionSignature{"str_eq", {TypeKind::Str, TypeKind::Str}, TypeKind::Bool, SourceLocation{0, 0}});
-    functions_.emplace("str_concat", FunctionSignature{"str_concat", {TypeKind::Str, TypeKind::Str}, TypeKind::Str, SourceLocation{0, 0}});
-    functions_.emplace("str_len", FunctionSignature{"str_len", {TypeKind::Str}, TypeKind::Int, SourceLocation{0, 0}});
-    functions_.emplace("str_get", FunctionSignature{"str_get", {TypeKind::Str, TypeKind::Int}, TypeKind::Int, SourceLocation{0, 0}});
-    functions_.emplace("str_slice", FunctionSignature{"str_slice", {TypeKind::Str, TypeKind::Int, TypeKind::Int}, TypeKind::Str, SourceLocation{0, 0}});
-    functions_.emplace("str_starts_with", FunctionSignature{"str_starts_with", {TypeKind::Str, TypeKind::Str}, TypeKind::Bool, SourceLocation{0, 0}});
-    functions_.emplace("str_contains", FunctionSignature{"str_contains", {TypeKind::Str, TypeKind::Str}, TypeKind::Bool, SourceLocation{0, 0}});
-    functions_.emplace("int_to_str", FunctionSignature{"int_to_str", {TypeKind::Int}, TypeKind::Str, SourceLocation{0, 0}});
+    functions_.emplace("print_str", FunctionSignature{"print_str", {Type(TypeKind::Str)}, Type(TypeKind::Void), SourceLocation{0, 0}});
+    functions_.emplace("str_eq", FunctionSignature{"str_eq", {Type(TypeKind::Str), Type(TypeKind::Str)}, Type{TypeKind::Bool}, SourceLocation{0, 0}});
+    functions_.emplace("str_concat", FunctionSignature{"str_concat", {Type(TypeKind::Str), Type(TypeKind::Str)}, Type(TypeKind::Str), SourceLocation{0, 0}});
+    functions_.emplace("str_len", FunctionSignature{"str_len", {Type(TypeKind::Str)}, Type(TypeKind::Int), SourceLocation{0, 0}});
+    functions_.emplace("str_get", FunctionSignature{"str_get", {Type(TypeKind::Str), Type(TypeKind::Int)}, Type(TypeKind::Int), SourceLocation{0, 0}});
+    functions_.emplace("str_slice", FunctionSignature{"str_slice", {Type(TypeKind::Str), Type(TypeKind::Int), Type(TypeKind::Int)}, Type(TypeKind::Str), SourceLocation{0, 0}});
+    functions_.emplace("str_starts_with", FunctionSignature{"str_starts_with", {Type(TypeKind::Str), Type(TypeKind::Str)}, Type{TypeKind::Bool}, SourceLocation{0, 0}});
+    functions_.emplace("str_contains", FunctionSignature{"str_contains", {Type(TypeKind::Str), Type(TypeKind::Str)}, Type{TypeKind::Bool}, SourceLocation{0, 0}});
+    functions_.emplace("int_to_str", FunctionSignature{"int_to_str", {Type(TypeKind::Int)}, Type(TypeKind::Str), SourceLocation{0, 0}});
 
-    functions_.emplace("read_file", FunctionSignature{"read_file", {TypeKind::Str}, TypeKind::Str, SourceLocation{0, 0}});
-    functions_.emplace("write_file", FunctionSignature{"write_file", {TypeKind::Str, TypeKind::Str}, TypeKind::Void, SourceLocation{0, 0}});
+    functions_.emplace("read_file", FunctionSignature{"read_file", {Type(TypeKind::Str)}, Type(TypeKind::Str), SourceLocation{0, 0}});
+    functions_.emplace("write_file", FunctionSignature{"write_file", {Type(TypeKind::Str), Type(TypeKind::Str)}, Type(TypeKind::Void), SourceLocation{0, 0}});
 
-    functions_.emplace("buf_new", FunctionSignature{"buf_new", {}, TypeKind::Int, SourceLocation{0, 0}});
-    functions_.emplace("buf_push_str", FunctionSignature{"buf_push_str", {TypeKind::Int, TypeKind::Str}, TypeKind::Void, SourceLocation{0, 0}});
-    functions_.emplace("buf_push_int", FunctionSignature{"buf_push_int", {TypeKind::Int, TypeKind::Int}, TypeKind::Void, SourceLocation{0, 0}});
-    functions_.emplace("buf_to_str", FunctionSignature{"buf_to_str", {TypeKind::Int}, TypeKind::Str, SourceLocation{0, 0}});
+    functions_.emplace("buf_new", FunctionSignature{"buf_new", {}, Type(TypeKind::Int), SourceLocation{0, 0}});
+    functions_.emplace("buf_push_str", FunctionSignature{"buf_push_str", {Type(TypeKind::Int), Type(TypeKind::Str)}, Type(TypeKind::Void), SourceLocation{0, 0}});
+    functions_.emplace("buf_push_int", FunctionSignature{"buf_push_int", {Type(TypeKind::Int), Type(TypeKind::Int)}, Type(TypeKind::Void), SourceLocation{0, 0}});
+    functions_.emplace("buf_to_str", FunctionSignature{"buf_to_str", {Type(TypeKind::Int)}, Type(TypeKind::Str), SourceLocation{0, 0}});
 
-    functions_.emplace("str_vec_new", FunctionSignature{"str_vec_new", {}, TypeKind::Int, SourceLocation{0, 0}});
-    functions_.emplace("str_vec_push", FunctionSignature{"str_vec_push", {TypeKind::Int, TypeKind::Str}, TypeKind::Void, SourceLocation{0, 0}});
-    functions_.emplace("str_vec_get", FunctionSignature{"str_vec_get", {TypeKind::Int, TypeKind::Int}, TypeKind::Str, SourceLocation{0, 0}});
-    functions_.emplace("str_vec_len", FunctionSignature{"str_vec_len", {TypeKind::Int}, TypeKind::Int, SourceLocation{0, 0}});
+    functions_.emplace("str_vec_new", FunctionSignature{"str_vec_new", {}, Type(TypeKind::Int), SourceLocation{0, 0}});
+    functions_.emplace("str_vec_push", FunctionSignature{"str_vec_push", {Type(TypeKind::Int), Type(TypeKind::Str)}, Type(TypeKind::Void), SourceLocation{0, 0}});
+    functions_.emplace("str_vec_get", FunctionSignature{"str_vec_get", {Type(TypeKind::Int), Type(TypeKind::Int)}, Type(TypeKind::Str), SourceLocation{0, 0}});
+    functions_.emplace("str_vec_len", FunctionSignature{"str_vec_len", {Type(TypeKind::Int)}, Type(TypeKind::Int), SourceLocation{0, 0}});
 
-    functions_.emplace("arg_count", FunctionSignature{"arg_count", {}, TypeKind::Int, SourceLocation{0, 0}});
-    functions_.emplace("arg_get", FunctionSignature{"arg_get", {TypeKind::Int}, TypeKind::Str, SourceLocation{0, 0}});
+    functions_.emplace("arg_count", FunctionSignature{"arg_count", {}, Type(TypeKind::Int), SourceLocation{0, 0}});
+    functions_.emplace("arg_get", FunctionSignature{"arg_get", {Type(TypeKind::Int)}, Type(TypeKind::Str), SourceLocation{0, 0}});
 
-    functions_.emplace("exit_with_error", FunctionSignature{"exit_with_error", {TypeKind::Str}, TypeKind::Void, SourceLocation{0, 0}});
+    functions_.emplace("exit_with_error", FunctionSignature{"exit_with_error", {Type(TypeKind::Str)}, Type(TypeKind::Void), SourceLocation{0, 0}});
 }
 
 
@@ -60,10 +103,16 @@ void SemanticAnalyzer::pop_scope() {
 }
 
 
-void SemanticAnalyzer::declare_variable(std::string_view name, TypeKind type, const SourceLocation& loc) {
+void SemanticAnalyzer::declare_variable(std::string_view name, Type type, const SourceLocation& loc) {
     auto& current_scope = scopes_.back();
     if (current_scope.contains(std::string(name))) {
         throw SemaError(std::format("duplicate variable '{}'", name), loc);
+    }
+    if (type.kind == TypeKind::Void) {
+        throw SemaError("variable cannot have void type", loc);
+    }
+    if (type.kind == TypeKind::Struct && !structs_.contains(type.name)) {
+        throw SemaError(std::format("undefined struct type '{}'", type.name), loc);
     }
     current_scope.emplace(std::string(name), VariableInfo{ std::string(name), type, loc });
 }
@@ -80,7 +129,7 @@ const VariableInfo& SemanticAnalyzer::resolve_variable(std::string_view name, co
 }
 
 
-void SemanticAnalyzer::expect_type(TypeKind actual, TypeKind expected, const SourceLocation& loc, std::string_view context) const {
+void SemanticAnalyzer::expect_type(Type actual, Type expected, const SourceLocation& loc, std::string_view context) const {
     if (actual != expected) {
         throw SemaError(std::format("type error in {}: expected {}, got {}", 
             context, type_to_string(expected), type_to_string(actual)), loc);
@@ -89,7 +138,13 @@ void SemanticAnalyzer::expect_type(TypeKind actual, TypeKind expected, const Sou
 
 
 bool SemanticAnalyzer::is_lvalue(const Expr& expr) const {
-    return dynamic_cast<const IdentifierExpr*>(&expr) != nullptr;
+    return dynamic_cast<const IdentifierExpr*>(&expr) != nullptr || 
+        dynamic_cast<const FieldAccessExpr*>(&expr) != nullptr;
+}
+
+
+bool SemanticAnalyzer::is_keyword(std::string_view name) const {
+    return keywords.contains(name);
 }
 
 
@@ -101,7 +156,9 @@ void SemanticAnalyzer::analyze(const Program& program) {
 
 void SemanticAnalyzer::visit(const Program& program) {
     install_builtin_functions();
+    collect_struct_declarations(program);
     collect_function_signatures(program);
+    
     for (const auto& func : program.functions) {
         func->accept(*this);
     }
@@ -115,7 +172,7 @@ void SemanticAnalyzer::visit(const FunctionDecl& func) {
     push_scope();
 
     for (const auto& param : func.params) {
-        param.accept(*this);
+        declare_variable(param.name, param.type, param.location);
     }
     
     bool body_returns = false;
@@ -129,7 +186,7 @@ void SemanticAnalyzer::visit(const FunctionDecl& func) {
 
     pop_scope();
 
-    if (func.return_type != TypeKind::Void && !body_returns) {
+    if (func.return_type != Type(TypeKind::Void) && !body_returns) {
         throw SemaError(std::format("missing return statement in function '{}'", func.name), func.location);
     }
 
@@ -138,9 +195,10 @@ void SemanticAnalyzer::visit(const FunctionDecl& func) {
 }
 
 
-void SemanticAnalyzer::visit(const ParamDecl& param) {
-    declare_variable(param.name, param.type, param.location);
-}
+void SemanticAnalyzer::visit(const ParamField&) {}
+
+
+void SemanticAnalyzer::visit(const StructDecl&) {}
 
 
 void SemanticAnalyzer::visit(const BlockStmt& block) {
@@ -161,6 +219,10 @@ void SemanticAnalyzer::visit(const BlockStmt& block) {
 
 
 void SemanticAnalyzer::visit(const LetStmt& stmt) {
+    if (stmt.declared_type.kind == TypeKind::Struct && !structs_.contains(stmt.declared_type.name)) {
+        throw SemaError(std::format("undefined struct type '{}'", stmt.declared_type.name), stmt.type_location);
+    }
+
     stmt.initializer->accept(*this);
     expect_type(last_type_, stmt.declared_type, stmt.name_location, "variable initializer");
     
@@ -171,7 +233,7 @@ void SemanticAnalyzer::visit(const LetStmt& stmt) {
 
 void SemanticAnalyzer::visit(const IfStmt& stmt) {
     stmt.condition->accept(*this);
-    expect_type(last_type_, TypeKind::Bool, stmt.condition->location, "if condition");
+    expect_type(last_type_, Type{TypeKind::Bool}, stmt.condition->location, "if condition");
 
     stmt.then_branch->accept(*this);
     bool then_returns = last_stmt_returns_;
@@ -188,7 +250,7 @@ void SemanticAnalyzer::visit(const IfStmt& stmt) {
 
 void SemanticAnalyzer::visit(const WhileStmt& stmt) {
     stmt.condition->accept(*this);
-    expect_type(last_type_, TypeKind::Bool, stmt.condition->location, 
+    expect_type(last_type_, Type{TypeKind::Bool}, stmt.condition->location, 
         "while condition");
 
     stmt.body->accept(*this);
@@ -206,7 +268,7 @@ void SemanticAnalyzer::visit(const WhileStmt& stmt) {
 void SemanticAnalyzer::visit(const ReturnStmt& stmt) {
     if (stmt.value) {
         stmt.value->accept(*this);
-        if (current_return_type_ == TypeKind::Void) {
+        if (current_return_type_ == Type(TypeKind::Void)) {
             throw SemaError(std::format("void function {} should not return a value", current_function_name_), stmt.location);
         }
         if (last_type_ != current_return_type_) {
@@ -214,7 +276,7 @@ void SemanticAnalyzer::visit(const ReturnStmt& stmt) {
                 type_to_string(current_return_type_), type_to_string(last_type_)), stmt.location);
         }
     } else {
-        if (current_return_type_ != TypeKind::Void) {
+        if (current_return_type_ != Type(TypeKind::Void)) {
             throw SemaError(std::format("non-void function {} must return a value", current_function_name_), stmt.location);
         }
     }
@@ -233,10 +295,10 @@ void SemanticAnalyzer::visit(const AssignExpr& expr) {
         throw SemaError("invalid assignment target", expr.target->location);
     }
     expr.value->accept(*this);
-    TypeKind value_type = last_type_;
+    Type value_type = last_type_;
 
     expr.target->accept(*this);
-    TypeKind target_type = last_type_;
+    Type target_type = last_type_;
     
     expect_type(value_type, target_type, expr.location, "assignment");
     last_type_ = target_type;
@@ -245,10 +307,10 @@ void SemanticAnalyzer::visit(const AssignExpr& expr) {
 
 void SemanticAnalyzer::visit(const BinaryExpr& expr) {
     expr.left->accept(*this);
-    TypeKind left_type = last_type_;
+    Type left_type = last_type_;
 
     expr.right->accept(*this);
-    TypeKind right_type = last_type_;
+    Type right_type = last_type_;
 
     switch (expr.op) {
         case BinaryOp::Add:
@@ -256,16 +318,16 @@ void SemanticAnalyzer::visit(const BinaryExpr& expr) {
         case BinaryOp::Mul:
         case BinaryOp::Div:
         case BinaryOp::Mod:
-            expect_type(left_type, TypeKind::Int, expr.left->location, "arithmetic operator left operand");
-            expect_type(right_type, TypeKind::Int, expr.right->location, "arithmetic operator right operand");
-            last_type_ = TypeKind::Int;
+            expect_type(left_type, Type(TypeKind::Int), expr.left->location, "arithmetic operator left operand");
+            expect_type(right_type, Type(TypeKind::Int), expr.right->location, "arithmetic operator right operand");
+            last_type_ = Type(TypeKind::Int);
             return;
 
         case BinaryOp::LogicalAnd:
         case BinaryOp::LogicalOr:
-            expect_type(left_type, TypeKind::Bool, expr.left->location, "logical operator left operand");
-            expect_type(right_type, TypeKind::Bool, expr.right->location, "logical operator right operand");
-            last_type_ = TypeKind::Bool;
+            expect_type(left_type, Type{TypeKind::Bool}, expr.left->location, "logical operator left operand");
+            expect_type(right_type, Type{TypeKind::Bool}, expr.right->location, "logical operator right operand");
+            last_type_ = Type{TypeKind::Bool};
             return;
 
         case BinaryOp::EqEq:
@@ -273,16 +335,16 @@ void SemanticAnalyzer::visit(const BinaryExpr& expr) {
             if (left_type != right_type) {
                 throw SemaError("type mismatch in equality operator", expr.location);
             }
-            last_type_ = TypeKind::Bool;
+            last_type_ = Type{TypeKind::Bool};
             return;
 
         case BinaryOp::Less:
         case BinaryOp::Greater:
         case BinaryOp::LeEq:
         case BinaryOp::GrEq:
-            expect_type(left_type, TypeKind::Int, expr.left->location, "comparison operator left operand");
-            expect_type(right_type, TypeKind::Int, expr.right->location, "comparison operator right operand");
-            last_type_ = TypeKind::Bool;
+            expect_type(left_type, Type(TypeKind::Int), expr.left->location, "comparison operator left operand");
+            expect_type(right_type, Type(TypeKind::Int), expr.right->location, "comparison operator right operand");
+            last_type_ = Type{TypeKind::Bool};
             return;
 
         default:
@@ -293,17 +355,17 @@ void SemanticAnalyzer::visit(const BinaryExpr& expr) {
 
 void SemanticAnalyzer::visit(const UnaryExpr& expr) {
     expr.operand->accept(*this);
-    TypeKind operand_type = last_type_;
+    Type operand_type = last_type_;
 
     switch (expr.op) {
         case UnaryOp::Negate:
-            expect_type(operand_type, TypeKind::Int, expr.operand->location, "negation operator operand");
-            last_type_ = TypeKind::Int;
+            expect_type(operand_type, Type(TypeKind::Int), expr.operand->location, "negation operator operand");
+            last_type_ = Type(TypeKind::Int);
             return;
 
         case UnaryOp::Not:
-            expect_type(operand_type, TypeKind::Bool, expr.operand->location, "logical not operator operand");
-            last_type_ = TypeKind::Bool;
+            expect_type(operand_type, Type{TypeKind::Bool}, expr.operand->location, "logical not operator operand");
+            last_type_ = Type{TypeKind::Bool};
             return;
 
         default:
@@ -340,15 +402,64 @@ void SemanticAnalyzer::visit(const IdentifierExpr& expr) {
 
 
 void SemanticAnalyzer::visit(const IntLiteralExpr&) {
-    last_type_ = TypeKind::Int;
+    last_type_ = Type(TypeKind::Int);
 }
 
 
 void SemanticAnalyzer::visit(const BoolLiteralExpr&) {
-    last_type_ = TypeKind::Bool;
+    last_type_ = Type{TypeKind::Bool};
 }
 
 
 void SemanticAnalyzer::visit(const StrLiteralExpr&) {
-    last_type_ = TypeKind::Str;
+    last_type_ = Type(TypeKind::Str);
+}
+
+
+void SemanticAnalyzer::visit(const StructLiteralExpr& expr) {
+    if (!structs_.contains(expr.name)) {
+        throw SemaError(std::format("undefined struct type '{}'", expr.name), expr.location);
+    }
+    const auto& struct_info = structs_.at(expr.name);
+    std::unordered_set<std::string> seen;
+
+    for (const auto& initializer : expr.field_initializers) {
+        if (seen.contains(initializer.name)) {
+            throw SemaError(std::format("duplicate field '{}' in struct literal '{}'", initializer.name, expr.name), initializer.location);
+        }
+        if (!struct_info.field_index.contains(initializer.name)) {
+            throw SemaError(std::format("unknown field '{}' in struct '{}'", initializer.name, expr.name), initializer.location);
+        }
+        initializer.value->accept(*this);
+        const auto& expected_type = struct_info.fields[struct_info.field_index.at(initializer.name)].type;
+        expect_type(last_type_, expected_type, initializer.location, std::format("field '{}' in struct literal '{}'", initializer.name, expr.name));
+        seen.insert(initializer.name);
+    }
+
+    for (const auto& field : struct_info.fields) {
+        if (!seen.contains(field.name)) {
+            throw SemaError(std::format("missing field '{}' in struct literal '{}'", field.name, expr.name), expr.location);
+        }
+    }
+
+    last_type_ = Type(TypeKind::Struct, expr.name);
+}
+
+
+void SemanticAnalyzer::visit(const FieldAccessExpr& expr) {
+    expr.object->accept(*this);
+    Type object_type = last_type_;
+
+    if (object_type.kind != TypeKind::Struct) {
+        throw SemaError("field access on non-struct type", expr.object->location);
+    }
+    if (!structs_.contains(object_type.name)) {
+        throw SemaError(std::format("undefined struct type '{}'", object_type.name), expr.object->location);
+    }
+    const auto& struct_info = structs_.at(object_type.name);
+
+    if (!struct_info.field_index.contains(expr.field_name)) {
+        throw SemaError(std::format("unknown field '{}' in struct '{}'", expr.field_name, object_type.name), expr.field_location);
+    }
+    last_type_ = struct_info.fields[struct_info.field_index.at(expr.field_name)].type;
 }

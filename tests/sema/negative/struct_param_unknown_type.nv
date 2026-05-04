@@ -1,0 +1,7 @@
+fn f(p: Point) : void {
+    return;
+}
+
+fn main() : void {
+    return;
+}

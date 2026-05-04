@@ -13,6 +13,16 @@ enum class TypeKind {
     Bool,
     Str,
     Void,
+    Struct,
+};
+
+
+struct Type {
+    TypeKind kind;
+    std::string name; // only used for Struct
+
+    // name will be default empty for non-struct types
+    Type(TypeKind kind, std::string name = "") : kind(kind), name(std::move(name)) {}
 };
 
 
@@ -41,13 +51,23 @@ enum class BinaryOp {
 };
 
 
-inline const char* type_to_string(TypeKind type) {
-    switch (type) {
-        case TypeKind::Int:  return "int";
-        case TypeKind::Bool: return "bool";
-        case TypeKind::Str:  return "str";
-        case TypeKind::Void: return "void";
-        default:             return "unknown";
+inline bool operator==(const Type& a, const Type& b) {
+    if (a.kind != b.kind) return false;
+    if (a.kind == TypeKind::Struct) {
+        return a.name == b.name;
+    }
+    return true;
+}
+
+
+inline std::string type_to_string(Type type) {
+    switch (type.kind) {
+        case TypeKind::Int:     return "int";
+        case TypeKind::Bool:    return "bool";
+        case TypeKind::Str:     return "str";
+        case TypeKind::Void:    return "void";
+        case TypeKind::Struct:  return type.name;
+        default:                return "UnknownType";
     }
 }
 
@@ -115,26 +135,48 @@ struct BlockStmt : Stmt {
 };
 
 
-struct ParamDecl {
+struct ParamField {
     SourceLocation location;
     std::string name;
-    TypeKind type;
+    Type type;
 
-    ParamDecl(std::string name, TypeKind type, SourceLocation loc) : 
+    ParamField(std::string name, Type type, SourceLocation loc) : 
         location(loc), name(std::move(name)), type(type) {}
-
+    
     void accept(ASTVisitor& visitor) const { visitor.visit(*this); }
 };
 
 
 struct FunctionDecl : Decl {
     std::string name;
-    std::vector<ParamDecl> params;
-    TypeKind return_type;
+    std::vector<ParamField> params;
+    Type return_type;
     std::unique_ptr<BlockStmt> body;
 
-    FunctionDecl(std::string name, std::vector<ParamDecl> params, TypeKind return_type, std::unique_ptr<BlockStmt> body, SourceLocation loc) :
+    FunctionDecl(std::string name, std::vector<ParamField> params, Type return_type, std::unique_ptr<BlockStmt> body, SourceLocation loc) :
         Decl(loc), name(std::move(name)), params(std::move(params)), return_type(return_type), body(std::move(body)) {}
+    
+    void accept(ASTVisitor& visitor) const override { visitor.visit(*this); }
+};
+
+
+struct StructField {
+    std::string name;
+    Type type;
+    SourceLocation location;
+    SourceLocation type_location;
+
+    StructField(std::string name, Type type, SourceLocation loc, SourceLocation type_loc): 
+        name(std::move(name)), type(type), location(loc), type_location(type_loc) {}
+};
+
+
+struct StructDecl : Decl {
+    std::string name;
+    std::vector<StructField> fields;
+
+    StructDecl(std::string name, std::vector<StructField> fields, SourceLocation loc) :
+        Decl(loc), name(std::move(name)), fields(std::move(fields)) {}
     
     void accept(ASTVisitor& visitor) const override { visitor.visit(*this); }
 };
@@ -143,9 +185,11 @@ struct FunctionDecl : Decl {
 struct Program : ASTNode {
     std::string name;
     std::vector<std::unique_ptr<FunctionDecl>> functions;
+    std::vector<std::unique_ptr<StructDecl>> structs;
 
-    Program(std::string name, std::vector<std::unique_ptr<FunctionDecl>> functions, SourceLocation loc) :
-        ASTNode(loc), name(std::move(name)), functions(std::move(functions)) {}
+    Program(std::string name, std::vector<std::unique_ptr<FunctionDecl>> functions, 
+        std::vector<std::unique_ptr<StructDecl>> structs, SourceLocation loc) :
+        ASTNode(loc), name(std::move(name)), functions(std::move(functions)), structs(std::move(structs)) {}
 
     void accept(ASTVisitor& visitor) const override { visitor.visit(*this); }
 };
@@ -153,12 +197,13 @@ struct Program : ASTNode {
 
 struct LetStmt : Stmt {
     std::string name;
-    TypeKind declared_type;
+    Type declared_type;
+    SourceLocation type_location;
     std::unique_ptr<Expr> initializer;
     SourceLocation name_location;
 
-    LetStmt(std::string name, TypeKind declared_type, std::unique_ptr<Expr> initializer, SourceLocation loc, SourceLocation name_loc) :
-        Stmt(loc), name(std::move(name)), declared_type(declared_type), initializer(std::move(initializer)), name_location(name_loc) {}
+    LetStmt(std::string name, Type declared_type, std::unique_ptr<Expr> initializer, SourceLocation loc, SourceLocation name_loc, SourceLocation type_loc) :
+        Stmt(loc), name(std::move(name)), declared_type(declared_type), type_location(type_loc), initializer(std::move(initializer)), name_location(name_loc) {}
 
     void accept(ASTVisitor& visitor) const override { visitor.visit(*this); }
 };
@@ -287,6 +332,39 @@ struct StrLiteralExpr : Expr {
 
     StrLiteralExpr(std::string value, SourceLocation loc) :
         Expr(loc), lexeme(std::move(value)) {}
+
+    void accept(ASTVisitor& visitor) const override { visitor.visit(*this); }
+};
+
+
+struct StructLiteralField {
+    std::string name;
+    std::unique_ptr<Expr> value;
+    SourceLocation location;
+
+    StructLiteralField(std::string name, std::unique_ptr<Expr> value, SourceLocation loc) :
+        name(std::move(name)), value(std::move(value)), location(loc) {}
+};
+
+
+struct StructLiteralExpr : Expr {
+    std::string name;
+    std::vector<StructLiteralField> field_initializers;
+
+    StructLiteralExpr(std::string name, std::vector<StructLiteralField> field_initializers, SourceLocation loc) :
+        Expr(loc), name(std::move(name)), field_initializers(std::move(field_initializers)) {}
+
+    void accept(ASTVisitor& visitor) const override { visitor.visit(*this); }
+};
+
+
+struct FieldAccessExpr : Expr {
+    std::unique_ptr<Expr> object;
+    std::string field_name;
+    SourceLocation field_location;
+
+    FieldAccessExpr(std::unique_ptr<Expr> object, std::string field_name, SourceLocation loc, SourceLocation field_loc) :
+        Expr(loc), object(std::move(object)), field_name(std::move(field_name)), field_location(field_loc) {}
 
     void accept(ASTVisitor& visitor) const override { visitor.visit(*this); }
 };
