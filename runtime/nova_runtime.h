@@ -32,4 +32,4 @@ int arg_count();
 const char* arg_get(int index);
 void nova_runtime_init(int argc, char** argv);
 
-void exit_with_error(const char* message);
+void nova_runtime_error(const char* message);

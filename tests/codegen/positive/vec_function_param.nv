@@ -1,0 +1,22 @@
+fn sum(xs: vec<int>) : int {
+    let i : int = 0;
+    let total : int = 0;
+
+    while (i < vec_len(xs)) {
+        total = total + vec_get(xs, i);
+        i = i + 1;
+    }
+
+    return total;
+}
+
+fn main() : void {
+    let xs : vec<int> = vec_new();
+
+    vec_push(xs, 5);
+    vec_push(xs, 7);
+    vec_push(xs, 9);
+
+    print_int(sum(xs));
+    return;
+}

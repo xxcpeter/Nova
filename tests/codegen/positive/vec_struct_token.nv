@@ -1,0 +1,19 @@
+struct Token {
+    kind: int;
+    lexeme: str;
+    line: int;
+    column: int;
+}
+
+fn main() : void {
+    let tokens : vec<Token> = vec_new();
+
+    vec_push(tokens, Token { kind: 1, lexeme: "fn", line: 1, column: 1 });
+    vec_push(tokens, Token { kind: 2, lexeme: "main", line: 1, column: 4 });
+
+    print_int(vec_len(tokens));
+    print_str(vec_get(tokens, 0).lexeme);
+    print_str(vec_get(tokens, 1).lexeme);
+
+    return;
+}

@@ -25,6 +25,7 @@ std::string to_string(TokenType type) {
         case KW_STR:        return "KW_STR";
         case KW_VOID:       return "KW_VOID";
         case KW_STRUCT:     return "KW_STRUCT";
+        case KW_VEC:        return "KW_VEC";
         case PLUS:          return "PLUS";
         case MINUS:         return "MINUS";
         case STAR:          return "STAR";

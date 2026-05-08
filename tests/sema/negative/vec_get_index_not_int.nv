@@ -1,0 +1,5 @@
+fn main() : void {
+    let xs : vec<int> = vec_new();
+    let x : int = vec_get(xs, true);
+    return;
+}

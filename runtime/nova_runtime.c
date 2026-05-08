@@ -151,8 +151,8 @@ const char* read_file(const char* path) {
     }
 
     char* content = rt_malloc(length + 1);
-    fread(content, 1, length, file);
-    if (strlen(content) != length) {
+    size_t nread = fread(content, 1, length, file);
+    if (nread != (size_t)length) {
         runtime_error("failed to read entire file");
     }
 
@@ -262,7 +262,7 @@ void nova_runtime_init(int argc, char** argv) {
     rt_argv = argv;
 }
 
-void exit_with_error(const char *message)
+void nova_runtime_error(const char *message)
 {
     runtime_error(message);
 }

@@ -10,7 +10,7 @@
 
 static const std::unordered_set<std::string_view> keywords = {
     "fn", "let", "if", "else", "while", "return", 
-    "struct", "int", "bool", "str", "void", "true", "false"
+    "struct", "vec", "int", "bool", "str", "void", "true", "false"
 };
 
 
@@ -70,16 +70,25 @@ public:
     void visit(const StrLiteralExpr& expr) override;
     void visit(const StructLiteralExpr& expr) override;
     void visit(const FieldAccessExpr& expr) override;
+
+    void visit_vec_new(const CallExpr& expr);
+    void visit_vec_len(const CallExpr& expr);
+    void visit_vec_push(const CallExpr& expr);
+    void visit_vec_get(const CallExpr& expr);
+    void visit_vec_set(const CallExpr& expr);
+
 private:
     Type last_type_{TypeKind::Void};
     bool last_stmt_returns_;
 
     std::string_view source_name_;
+    const Program* current_program_ = nullptr;
     std::unordered_map<std::string, FunctionSignature> functions_;
     std::unordered_map<std::string, StructInfo> structs_;
     std::vector<std::unordered_map<std::string, VariableInfo>> scopes_;
     Type current_return_type_{TypeKind::Void};
     std::string current_function_name_;
+    const Type* current_expected_type_ = nullptr;
 
     void collect_struct_declarations(const Program& program);
     void collect_function_signatures(const Program& program);
@@ -89,7 +98,9 @@ private:
     void pop_scope();
     void declare_variable(std::string_view name, Type type, const SourceLocation& loc);
     const VariableInfo& resolve_variable(std::string_view name, const SourceLocation& loc) const;
+    Type infer_expr_type(const Expr& expr, const Type* expected_type = nullptr, std::string_view context = "expression");
 
+    void validate_type(const Type& type, const SourceLocation& loc);
     void expect_type(Type actual, Type expected, const SourceLocation& loc, std::string_view context) const;
     bool is_lvalue(const Expr& expr) const;
     bool is_keyword(std::string_view name) const;

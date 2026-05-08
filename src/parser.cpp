@@ -108,6 +108,7 @@ std::unique_ptr<Program> Parser::parse_program() {
     SourceLocation location = peek().location;
     std::vector<std::unique_ptr<FunctionDecl>> functions;
     std::vector<std::unique_ptr<StructDecl>> structs;
+    std::unordered_set<Type, TypeHash> vec_types;
     while (!is_at_end()) {
         if (check(TokenType::KW_STRUCT)) {
             structs.push_back(parse_struct());
@@ -118,7 +119,7 @@ std::unique_ptr<Program> Parser::parse_program() {
         }
     }
     return std::make_unique<Program>(
-        std::move(name), std::move(functions), std::move(structs), location);
+        std::move(name), std::move(functions), std::move(structs), location, vec_types);
 }
 
 
@@ -182,13 +183,21 @@ StructField Parser::parse_struct_field() {
 
 
 Type Parser::parse_type() {
-    if (match(TokenType::KW_INT)) return Type(TypeKind::Int);
-    if (match(TokenType::KW_BOOL)) return Type(TypeKind::Bool);
-    if (match(TokenType::KW_STR)) return Type(TypeKind::Str);
-    if (match(TokenType::KW_VOID)) return Type(TypeKind::Void);
+    if (match(TokenType::KW_INT)) return Type(TypeKind::Int, previous().location);
+    if (match(TokenType::KW_BOOL)) return Type(TypeKind::Bool, previous().location);
+    if (match(TokenType::KW_STR)) return Type(TypeKind::Str, previous().location);
+    if (match(TokenType::KW_VOID)) return Type(TypeKind::Void, previous().location);
     if (check(TokenType::IDENT)) {
-        std::string name = advance().lexeme;
-        return Type(TypeKind::Struct, std::move(name));
+        const Token& token = advance();
+        std::string name = token.lexeme;
+        return Type(TypeKind::Struct, token.location, std::move(name));
+    }
+    if (match(TokenType::KW_VEC)) {
+        SourceLocation location = previous().location;
+        expect(TokenType::LT, "expected '<' after 'vec'");
+        Type element_type = parse_type();
+        expect(TokenType::GT, "expected '>' after vector element type");
+        return Type(TypeKind::Vec, location, "", std::make_shared<Type>(std::move(element_type)));
     }
     throw ParseError("expected type after ':'", peek().location);
 }

@@ -1,1 +1,1 @@
-SemanticError at 2:5: return type mismatch: expected int, got bool
+SemanticError at 2:12: type error in return statement: expected int, got bool

@@ -208,6 +208,7 @@ function(add_nova_lexer_tool_test name)
 endfunction()
 
 
+# step 2
 add_lexer_positive_test(single_tokens)
 add_lexer_positive_test(keywords_and_identifiers)
 add_lexer_positive_test(numbers)
@@ -224,6 +225,7 @@ add_lexer_negative_test(invalid_char)
 add_lexer_negative_test(single_ampersand)
 add_lexer_negative_test(single_pipe)
 
+# step 3
 add_parser_positive_test(minimal_function)
 add_parser_positive_test(let_and_return)
 add_parser_positive_test(precedence)
@@ -242,6 +244,7 @@ add_parser_negative_test(invalid_return_expr)
 add_parser_negative_test(incomplete_binary_expr)
 add_parser_negative_test(malformed_call_args)
 
+# step 4
 add_sema_positive_test(basic_program)
 add_sema_positive_test(function_call)
 add_sema_positive_test(shadowing)
@@ -265,6 +268,7 @@ add_sema_negative_test(function_argument_count_mismatch)
 add_sema_negative_test(function_argument_type_mismatch)
 add_sema_negative_test(call_unknown_function)
 
+# step 5
 add_codegen_positive_test(helloworld)
 add_codegen_positive_test(arithmetic)
 add_codegen_positive_test(function_call)
@@ -273,6 +277,7 @@ add_codegen_positive_test(loop)
 add_codegen_positive_test(string_concat)
 add_codegen_positive_test(nested_block_shadowing)
 
+# step 6
 add_codegen_positive_test(string_len_get)
 add_codegen_positive_test(string_slice)
 add_codegen_positive_test(string_predicates)
@@ -285,6 +290,7 @@ add_codegen_positive_test(str_vec_two_vectors)
 add_codegen_positive_test(str_vec_empty_len)
 add_codegen_positive_test(str_vec_with_buffer)
 
+# step 7
 add_nova_lexer_tool_test(basic)
 add_nova_lexer_tool_test(expressions)
 add_nova_lexer_tool_test(strings)
@@ -292,6 +298,7 @@ add_nova_lexer_tool_test(comments)
 add_nova_lexer_tool_test(operators)
 add_nova_lexer_tool_test(block_comment_inline)
 
+# step 8
 add_codegen_positive_test(struct_basic)
 add_codegen_positive_test(struct_assignment)
 add_codegen_positive_test(struct_function_return)
@@ -309,3 +316,18 @@ add_sema_negative_test(access_field_on_non_struct)
 add_sema_negative_test(unknown_field_access)
 add_sema_negative_test(struct_field_void_type)
 add_sema_negative_test(struct_param_unknown_type)
+
+# step 9
+add_codegen_positive_test(vec_int_basic)
+add_codegen_positive_test(vec_struct_token)
+add_codegen_positive_test(vec_set)
+add_codegen_positive_test(vec_function_param)
+add_codegen_positive_test(vec_function_return)
+add_codegen_positive_test(vec_of_str)
+
+add_sema_negative_test(vec_new_without_context)
+add_sema_negative_test(vec_push_type_mismatch)
+add_sema_negative_test(vec_get_index_not_int)
+add_sema_negative_test(vec_len_on_non_vec)
+add_sema_negative_test(vec_void_element)
+add_sema_negative_test(vec_unknown_struct_element)

@@ -1,0 +1,20 @@
+fn make_numbers() : vec<int> {
+    let xs : vec<int> = vec_new();
+
+    vec_push(xs, 3);
+    vec_push(xs, 4);
+    vec_push(xs, 5);
+
+    return xs;
+}
+
+fn main() : void {
+    let xs : vec<int> = make_numbers();
+
+    print_int(vec_len(xs));
+    print_int(vec_get(xs, 0));
+    print_int(vec_get(xs, 1));
+    print_int(vec_get(xs, 2));
+
+    return;
+}

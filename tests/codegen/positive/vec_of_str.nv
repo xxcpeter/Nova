@@ -1,0 +1,18 @@
+fn main() : void {
+    let parts : vec<str> = vec_new();
+
+    vec_push(parts, "hello");
+    vec_push(parts, " ");
+    vec_push(parts, "nova");
+
+    let b : int = buf_new();
+    let i : int = 0;
+
+    while (i < vec_len(parts)) {
+        buf_push_str(b, vec_get(parts, i));
+        i = i + 1;
+    }
+
+    print_str(buf_to_str(b));
+    return;
+}

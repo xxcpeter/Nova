@@ -20,10 +20,11 @@ private:
     void indent();
     void dedent();
 
-    std::string c_type(Type type);
+    std::string c_type(const Type& type);
 
     void gen_program(const Program& program);
     void gen_struct_decl(const StructDecl& struct_decl);
+    void gen_vec_helpers(const Program& program);
     void gen_function(const FunctionDecl& function);
     void gen_block_contents(const BlockStmt& block);
     void gen_block_stmt(const BlockStmt& block);

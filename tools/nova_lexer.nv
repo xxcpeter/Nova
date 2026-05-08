@@ -103,7 +103,7 @@ fn read_number (source : str, pos : int) : str {
         pos = pos + 1;
     }
     if (is_ident_start(peek_str(source, pos))) {
-        exit_with_error("lexer error: invalid number literal");
+        nova_runtime_error("lexer error: invalid number literal");
     }
     return str_slice(source, start, pos);
 }
@@ -247,7 +247,7 @@ fn classify_token (lexeme : str) : str {
     } else if (str_starts_with(lexeme, "\"")) {
         return "STR_LITERAL";
     } else {
-        exit_with_error(str_concat(str_concat("lexer error: unrecognized token '", lexeme), "'"));
+        nova_runtime_error(str_concat(str_concat("lexer error: unrecognized token '", lexeme), "'"));
         return "INVALID";
     }
 }
@@ -282,7 +282,7 @@ fn main () : void {
     while (pos < str_len(source)) {
         let new_pos : int = skip_whitespace_and_comment(source, pos);
         if (new_pos == -1) {
-            exit_with_error("lexer error: unterminated comment block");
+            nova_runtime_error("lexer error: unterminated comment block");
         }
         while (pos < new_pos) {
             if (peek_str(source, pos) == 10) { // newline

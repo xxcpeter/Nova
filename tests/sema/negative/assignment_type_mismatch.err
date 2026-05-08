@@ -1,1 +1,1 @@
-SemanticError at 3:7: type error in assignment: expected int, got bool
+SemanticError at 3:9: type error in assignment: expected int, got bool

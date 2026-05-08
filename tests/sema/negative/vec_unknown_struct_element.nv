@@ -1,0 +1,4 @@
+fn main() : void {
+    let xs : vec<Token> = vec_new();
+    return;
+}

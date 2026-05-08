@@ -1,5 +1,7 @@
 #include "codegen_c.h"
 
+#include <algorithm>
+
 
 void CCodeGenerator::generate(const Program& program, std::ostream& out) {
     out_ = &out;
@@ -35,13 +37,23 @@ void CCodeGenerator::dedent() {
 }
 
 
-std::string CCodeGenerator::c_type(Type type) {
+std::string CCodeGenerator::c_type(const Type& type) {
     switch (type.kind) {
         case TypeKind::Int: return "int";
         case TypeKind::Str: return "const char*";
         case TypeKind::Void: return "void";
         case TypeKind::Bool: return "bool";
         case TypeKind::Struct: return type.name;
+        case TypeKind::Vec: 
+            switch (type.element_type->kind) {
+                case TypeKind::Int: return "NovaVec_int*";
+                case TypeKind::Str: return "NovaVec_str*";
+                case TypeKind::Bool: return "NovaVec_bool*";
+                case TypeKind::Struct: return "NovaVec_" + type.element_type->name + "*";
+                case TypeKind::Vec:
+                case TypeKind::Void:
+                    throw std::runtime_error("Invalid vector element type " + type_to_string(*type.element_type));
+            }
     }
     throw std::runtime_error("Unknown type");
 }
@@ -58,6 +70,7 @@ void CCodeGenerator::gen_program(const Program& program) {
         gen_struct_decl(*struct_decl);
         emit_line();
     }
+    gen_vec_helpers(program);
     for (const auto& function : program.functions) {
         gen_function(*function);
         emit_line();
@@ -67,13 +80,95 @@ void CCodeGenerator::gen_program(const Program& program) {
 
 void CCodeGenerator::gen_struct_decl(const StructDecl& struct_decl) {
     emit_line("typedef struct " + struct_decl.name + " " + struct_decl.name + ";");
-    emit_line("struct {");
+    emit_line("struct " + struct_decl.name + " {");
     indent();
     for (const auto& field : struct_decl.fields) {
         emit_line(c_type(field.type) + " " + field.name + ";");
     }
     dedent();
     emit_line("};");
+}
+
+
+void CCodeGenerator::gen_vec_helpers(const Program& program) {
+    std::vector<Type> sorted_vec_types(program.vec_types.begin(), program.vec_types.end());
+    std::sort(sorted_vec_types.begin(), sorted_vec_types.end(), [](const Type& a, const Type& b) {
+        return type_to_string(a) < type_to_string(b);
+    });
+    for (const auto& type : sorted_vec_types) {
+        std::string type_name;
+        switch (type.kind) {
+            case TypeKind::Int: type_name = "int"; break;
+            case TypeKind::Str: type_name = "str"; break;
+            case TypeKind::Bool: type_name = "bool"; break;
+            case TypeKind::Struct: type_name = type.name; break;
+            default: throw std::runtime_error("Invalid vector element type " + type_to_string(type));
+        }
+        emit_line("typedef struct NovaVec_" + type_name + " {");
+        indent();
+        emit_line(c_type(type) + "* data;");
+        emit_line("size_t len;");
+        emit_line("size_t cap;");
+        dedent();
+        emit_line("} NovaVec_" + type_name + ";");
+        emit_line();
+
+        emit_line("static NovaVec_" + type_name + "* nova_vec_new_" + type_to_string(type) + "(void) {");
+        indent();
+        emit_line("NovaVec_" + type_name + "* vec = malloc(sizeof(NovaVec_" + type_name + "));");
+        emit_line("if (!vec) nova_runtime_error(\"out of memory\");");
+        emit_line("vec->data = NULL;");
+        emit_line("vec->len = 0;");
+        emit_line("vec->cap = 0;");
+        emit_line("return vec;");
+        dedent();
+        emit_line("}");
+        emit_line();
+
+        emit_line("static size_t nova_vec_len_" + type_to_string(type) + "(NovaVec_" + type_name + "* vec) {");
+        emit_line("    return vec->len;");
+        emit_line("}");
+        emit_line();
+
+        emit_line("static void nova_vec_push_" + type_to_string(type) + "(NovaVec_" + type_name + "* vec, " + c_type(type) + " value) {");
+        indent();
+        emit_line("if (vec->len >= vec->cap) {");
+        indent();
+        emit_line("vec->cap = vec->cap == 0 ? 4 : vec->cap * 2;");
+        emit_line("NovaVec_" + type_name + "* new_data = realloc(vec->data, vec->cap * sizeof(" + c_type(type) + "));");
+        emit_line("if (!new_data) nova_runtime_error(\"out of memory\");");
+        emit_line("vec->data = new_data;");
+        dedent();
+        emit_line("}");
+        emit_line("vec->data[vec->len++] = value;");
+        dedent();
+        emit_line("}");
+        emit_line();
+
+        emit_line("static " + c_type(type) + " nova_vec_get_" + type_to_string(type) + "(NovaVec_" + type_name + "* vec, size_t index) {");
+        indent();
+        emit_line("if (index >= vec->len) {");
+        indent();
+        emit_line("nova_runtime_error(\"vector index out of bounds\");");
+        dedent();
+        emit_line("}");
+        emit_line("return vec->data[index];");
+        dedent();
+        emit_line("}");
+        emit_line();
+
+        emit_line("static void nova_vec_set_" + type_to_string(type) + "(NovaVec_" + type_name + "* vec, size_t index, " + c_type(type) + " value) {");
+        indent();
+        emit_line("if (index >= vec->len) {");
+        indent();
+        emit_line("nova_runtime_error(\"vector index out of bounds\");");
+        dedent();
+        emit_line("}");
+        emit_line("vec->data[index] = value;");
+        dedent();
+        emit_line("}");
+        emit_line();
+    }
 }
 
 
@@ -233,6 +328,17 @@ std::string CCodeGenerator::gen_unary_expr(const UnaryExpr& expr) {
 
 
 std::string CCodeGenerator::gen_call_expr(const CallExpr& expr) {
+    if (expr.callee == "vec_new") {
+        return "nova_vec_new_" + type_to_string(*expr.resolved_type->element_type) + "()";
+    } else if (expr.callee == "vec_len") {
+        return "nova_vec_len_" + type_to_string(*expr.arguments[0]->resolved_type->element_type) + "(" + gen_expr(*expr.arguments[0]) + ")";
+    } else if (expr.callee == "vec_push") {
+        return "nova_vec_push_" + type_to_string(*expr.arguments[0]->resolved_type->element_type) + "(" + gen_expr(*expr.arguments[0]) + ", " + gen_expr(*expr.arguments[1]) + ")";
+    } else if (expr.callee == "vec_get") {
+        return "nova_vec_get_" + type_to_string(*expr.arguments[0]->resolved_type->element_type) + "(" + gen_expr(*expr.arguments[0]) + ", " + gen_expr(*expr.arguments[1]) + ")";
+    } else if (expr.callee == "vec_set") {
+        return "nova_vec_set_" + type_to_string(*expr.arguments[0]->resolved_type->element_type) + "(" + gen_expr(*expr.arguments[0]) + ", " + gen_expr(*expr.arguments[1]) + ", " + gen_expr(*expr.arguments[2]) + ")";
+    }
     std::string args_code;
     for (const auto& arg : expr.arguments) {
         args_code += gen_expr(*arg);

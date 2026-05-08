@@ -1,1 +1,1 @@
-SemanticError at 7:16: unknown field 'y' in struct 'Point'
+SemanticError at 7:17: unknown field 'y' in struct 'Point'

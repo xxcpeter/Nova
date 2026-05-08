@@ -1,1 +1,1 @@
-SemanticError at 7:29: type error in field 'kind' in struct literal 'Token': expected int, got str
+SemanticError at 7:35: type error in struct field initializer: expected int, got str

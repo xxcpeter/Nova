@@ -6,6 +6,8 @@
 #include <string>
 #include <vector>
 #include <memory>
+#include <unordered_set>
+#include <optional>
 
 
 enum class TypeKind {
@@ -14,15 +16,32 @@ enum class TypeKind {
     Str,
     Void,
     Struct,
+    Vec
 };
 
 
 struct Type {
     TypeKind kind;
+    SourceLocation location;
     std::string name; // only used for Struct
+    std::shared_ptr<Type> element_type; // only used for Vec
 
-    // name will be default empty for non-struct types
-    Type(TypeKind kind, std::string name = "") : kind(kind), name(std::move(name)) {}
+    Type(TypeKind kind, SourceLocation loc = {}, std::string name = "", std::shared_ptr<Type> element_type = nullptr) :
+        kind(kind), location(loc), name(std::move(name)), element_type(std::move(element_type)) {}
+};
+
+
+struct TypeHash {
+    std::size_t operator()(const Type& type) const {
+        std::size_t hash = std::hash<int>()(static_cast<int>(type.kind));
+        if (type.kind == TypeKind::Struct) {
+            hash ^= std::hash<std::string>{}(type.name);
+        }
+        if (type.kind == TypeKind::Vec) {
+            hash ^= operator()(*type.element_type);
+        }
+        return hash;
+    }
 };
 
 
@@ -56,6 +75,9 @@ inline bool operator==(const Type& a, const Type& b) {
     if (a.kind == TypeKind::Struct) {
         return a.name == b.name;
     }
+    if (a.kind == TypeKind::Vec) {
+        return a.element_type && b.element_type && *a.element_type == *b.element_type;
+    }
     return true;
 }
 
@@ -67,6 +89,7 @@ inline std::string type_to_string(Type type) {
         case TypeKind::Str:     return "str";
         case TypeKind::Void:    return "void";
         case TypeKind::Struct:  return type.name;
+        case TypeKind::Vec:     return "vec<" + type_to_string(*type.element_type) + ">";
         default:                return "UnknownType";
     }
 }
@@ -122,6 +145,7 @@ struct Stmt : ASTNode {
 
 struct Expr : ASTNode {
     using ASTNode::ASTNode;
+    mutable std::optional<Type> resolved_type;
 };
 
 
@@ -186,10 +210,11 @@ struct Program : ASTNode {
     std::string name;
     std::vector<std::unique_ptr<FunctionDecl>> functions;
     std::vector<std::unique_ptr<StructDecl>> structs;
+    mutable std::unordered_set<Type, TypeHash> vec_types;
 
     Program(std::string name, std::vector<std::unique_ptr<FunctionDecl>> functions, 
-        std::vector<std::unique_ptr<StructDecl>> structs, SourceLocation loc) :
-        ASTNode(loc), name(std::move(name)), functions(std::move(functions)), structs(std::move(structs)) {}
+        std::vector<std::unique_ptr<StructDecl>> structs, SourceLocation loc, std::unordered_set<Type, TypeHash> vec_types) :
+        ASTNode(loc), name(std::move(name)), functions(std::move(functions)), structs(std::move(structs)), vec_types(vec_types) {}
 
     void accept(ASTVisitor& visitor) const override { visitor.visit(*this); }
 };

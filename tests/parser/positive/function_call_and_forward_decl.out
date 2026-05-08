@@ -10,8 +10,8 @@ Program name=function_call_and_forward_decl.nv
         ReturnStmt
   FunctionDecl name=repeat_str return=str
     Params
-      ParamDecl name=base type=str
-      ParamDecl name=times type=int
+      ParamField name=base type=str
+      ParamField name=times type=int
     Body
       BlockStmt
         ReturnStmt

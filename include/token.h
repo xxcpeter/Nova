@@ -28,6 +28,7 @@ enum class TokenType {
     KW_STR,
     KW_VOID,
     KW_STRUCT,
+    KW_VEC,
 
     // operators
     PLUS,
