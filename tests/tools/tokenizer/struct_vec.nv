@@ -1,0 +1,9 @@
+struct Token {
+    kind: str;
+    line: int;
+}
+
+fn main() : void {
+    let tokens : vec<Token> = vec_new();
+    return;
+}

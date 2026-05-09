@@ -207,6 +207,22 @@ function(add_nova_lexer_tool_test name)
     set_tests_properties(nova_tool_lexer_${name} PROPERTIES LABELS "nova_tool;lexer")
 endfunction()
 
+function(add_nova_tokenizer_tool_test name)
+    add_test(
+        NAME nova_tool_tokenizer_${name}
+        COMMAND ${CMAKE_COMMAND}
+            -DNOVA_COMPILE=$<TARGET_FILE:nova_compile>
+            -DTOOL_SOURCE=${CMAKE_CURRENT_SOURCE_DIR}/tools/nova_tokenizer.nv
+            -DINPUT=${CMAKE_CURRENT_SOURCE_DIR}/tests/tools/tokenizer/${name}.nv
+            -DEXPECT=${CMAKE_CURRENT_SOURCE_DIR}/tests/tools/tokenizer/${name}.tok
+            -DRUNTIME_DIR=${CMAKE_CURRENT_SOURCE_DIR}/runtime
+            -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/nova_tool_tests/tokenizer_${name}
+            -DCC=cc
+            -P ${NOVA_TOOL_TEST_DRIVER}
+    )
+    set_tests_properties(nova_tool_tokenizer_${name} PROPERTIES LABELS "nova_tool;tokenizer")
+endfunction()
+
 
 # step 2
 add_lexer_positive_test(single_tokens)
@@ -331,3 +347,9 @@ add_sema_negative_test(vec_get_index_not_int)
 add_sema_negative_test(vec_len_on_non_vec)
 add_sema_negative_test(vec_void_element)
 add_sema_negative_test(vec_unknown_struct_element)
+
+# step 10
+add_nova_tokenizer_tool_test(basic)
+add_nova_tokenizer_tool_test(struct_vec)
+add_nova_tokenizer_tool_test(field_access)
+add_nova_tokenizer_tool_test(strings_comments)

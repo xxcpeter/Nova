@@ -1,0 +1,6 @@
+// comment
+fn main() : void {
+    print_str("a\n");
+    /* block */ print_str("b\"");
+    return;
+}

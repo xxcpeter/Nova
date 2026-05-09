@@ -135,7 +135,7 @@ void CCodeGenerator::gen_vec_helpers(const Program& program) {
         emit_line("if (vec->len >= vec->cap) {");
         indent();
         emit_line("vec->cap = vec->cap == 0 ? 4 : vec->cap * 2;");
-        emit_line("NovaVec_" + type_name + "* new_data = realloc(vec->data, vec->cap * sizeof(" + c_type(type) + "));");
+        emit_line(c_type(type) + "* new_data = realloc(vec->data, vec->cap * sizeof(" + c_type(type) + "));");
         emit_line("if (!new_data) nova_runtime_error(\"out of memory\");");
         emit_line("vec->data = new_data;");
         dedent();
