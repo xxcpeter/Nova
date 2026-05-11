@@ -5,6 +5,7 @@ struct Program;
 struct FunctionDecl;
 struct ParamField;
 struct StructDecl;
+struct EnumDecl;
 
 struct BlockStmt;
 struct LetStmt;
@@ -32,6 +33,7 @@ struct ASTVisitor {
     virtual void visit(const FunctionDecl&) = 0;
     virtual void visit(const ParamField&) = 0;
     virtual void visit(const StructDecl&) = 0;
+    virtual void visit(const EnumDecl&) = 0;
 
     virtual void visit(const BlockStmt&) = 0;
     virtual void visit(const LetStmt&) = 0;

@@ -53,6 +53,7 @@ private:
         {"void",    KW_VOID},
         {"struct",  KW_STRUCT},
         {"vec",     KW_VEC},
+        {"enum",    KW_ENUM},
     };
 
     static inline const std::unordered_map<std::string_view, TokenType> oper_puncs = {

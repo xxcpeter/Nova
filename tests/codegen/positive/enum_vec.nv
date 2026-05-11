@@ -1,0 +1,23 @@
+enum TokenKind {
+    KW_FN;
+    IDENT;
+    EOF;
+}
+
+fn main() : void {
+    let kinds : vec<TokenKind> = vec_new();
+
+    vec_push(kinds, TokenKind.KW_FN);
+    vec_push(kinds, TokenKind.IDENT);
+    vec_push(kinds, TokenKind.EOF);
+
+    print_int(vec_len(kinds));
+
+    if (vec_get(kinds, 1) == TokenKind.IDENT) {
+        print_str("ident");
+    } else {
+        print_str("bad");
+    }
+
+    return;
+}

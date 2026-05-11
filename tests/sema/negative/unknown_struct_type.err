@@ -1,1 +1,1 @@
-SemanticError at 2:13: undefined struct type 'Point'
+SemanticError at 2:13: unknown type 'Point'

@@ -44,12 +44,19 @@ std::string CCodeGenerator::c_type(const Type& type) {
         case TypeKind::Void: return "void";
         case TypeKind::Bool: return "bool";
         case TypeKind::Struct: return type.name;
+        case TypeKind::Enum: return type.name;
+        case TypeKind::Named: 
+            throw std::runtime_error("Unresolved named type " + type.name);
         case TypeKind::Vec: 
             switch (type.element_type->kind) {
                 case TypeKind::Int: return "NovaVec_int*";
                 case TypeKind::Str: return "NovaVec_str*";
                 case TypeKind::Bool: return "NovaVec_bool*";
-                case TypeKind::Struct: return "NovaVec_" + type.element_type->name + "*";
+                case TypeKind::Struct:
+                case TypeKind::Enum: 
+                    return "NovaVec_" + type.element_type->name + "*";
+                case TypeKind::Named:
+                    throw std::runtime_error("Unresolved named type " + type.element_type->name);
                 case TypeKind::Vec:
                 case TypeKind::Void:
                     throw std::runtime_error("Invalid vector element type " + type_to_string(*type.element_type));
@@ -66,6 +73,10 @@ void CCodeGenerator::gen_program(const Program& program) {
     emit_line("#include <stdbool.h>");
     emit_line("#include \"nova_runtime.h\"");
     emit_line();
+    for (const auto& enum_decl : program.enums) {
+        gen_enum_decl(*enum_decl);
+        emit_line();
+    }
     for (const auto& struct_decl : program.structs) {
         gen_struct_decl(*struct_decl);
         emit_line();
@@ -83,10 +94,21 @@ void CCodeGenerator::gen_struct_decl(const StructDecl& struct_decl) {
     emit_line("struct " + struct_decl.name + " {");
     indent();
     for (const auto& field : struct_decl.fields) {
-        emit_line(c_type(field.type) + " " + field.name + ";");
+        emit_line(c_type(*field.resolved_type) + " " + field.name + ";");
     }
     dedent();
     emit_line("};");
+}
+
+
+void CCodeGenerator::gen_enum_decl(const EnumDecl& enum_decl) {
+    emit_line("typedef enum " + enum_decl.name + " {");
+    indent();
+    for (const auto& member : enum_decl.members) {
+        emit_line(enum_decl.name + "_" + member.name + ",");
+    }
+    dedent();
+    emit_line("} " + enum_decl.name + ";");
 }
 
 
@@ -101,7 +123,9 @@ void CCodeGenerator::gen_vec_helpers(const Program& program) {
             case TypeKind::Int: type_name = "int"; break;
             case TypeKind::Str: type_name = "str"; break;
             case TypeKind::Bool: type_name = "bool"; break;
-            case TypeKind::Struct: type_name = type.name; break;
+            case TypeKind::Struct: 
+            case TypeKind::Enum: 
+                type_name = type.name; break;
             default: throw std::runtime_error("Invalid vector element type " + type_to_string(type));
         }
         emit_line("typedef struct NovaVec_" + type_name + " {");
@@ -180,10 +204,10 @@ void CCodeGenerator::gen_function(const FunctionDecl& function) {
     } else {
         std::string params;
         for (const auto& param : function.params) {
-            params += c_type(param.type) + " " + param.name;
+            params += c_type(*param.resolved_type) + " " + param.name;
             if (&param != &function.params.back()) params += ", ";
         }
-        emit_line(c_type(function.return_type) + " " + function.name + "(" + params + ") {");
+        emit_line(c_type(*function.resolved_return_type) + " " + function.name + "(" + params + ") {");
     }
     indent();
     gen_block_contents(*function.body);
@@ -233,7 +257,7 @@ void CCodeGenerator::gen_expr_stmt(const ExprStmt& stmt) {
 
 
 void CCodeGenerator::gen_let_stmt(const LetStmt& stmt) {
-    emit_line(c_type(stmt.declared_type) + " " + stmt.name + " = " + gen_expr(*stmt.initializer) + ";");
+    emit_line(c_type(*stmt.resolved_type) + " " + stmt.name + " = " + gen_expr(*stmt.initializer) + ";");
 }
 
 
@@ -382,5 +406,10 @@ std::string CCodeGenerator::gen_literal_expr(const StructLiteralExpr& expr) {
 
 
 std::string CCodeGenerator::gen_field_access_expr(const FieldAccessExpr& expr) {
-    return "(" + gen_expr(*expr.object) + ")." + expr.field_name;
+    if (expr.access_kind == FieldAccessExpr::FieldAccessKind::EnumMember) {
+        return expr.enum_name + "_" + expr.field_name;
+    } else if (expr.access_kind == FieldAccessExpr::FieldAccessKind::StructField) {
+        return "(" + gen_expr(*expr.object) + ")." + expr.field_name;
+    }
+    throw std::runtime_error("unknown field access kind");
 }

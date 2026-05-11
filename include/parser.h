@@ -37,6 +37,7 @@ private:
     std::vector<ParamField> parse_param_list();
     std::unique_ptr<StructDecl> parse_struct();
     StructField parse_struct_field();
+    std::unique_ptr<EnumDecl> parse_enum();
     Type parse_type();
 
     std::unique_ptr<Stmt> parse_statement();

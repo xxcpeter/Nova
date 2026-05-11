@@ -1,0 +1,17 @@
+enum Color {
+    Red;
+    Green;
+    Blue;
+}
+
+fn main() : void {
+    let c : Color = Color.Green;
+
+    if (c == Color.Green) {
+        print_str("green");
+    } else {
+        print_str("other");
+    }
+
+    return;
+}

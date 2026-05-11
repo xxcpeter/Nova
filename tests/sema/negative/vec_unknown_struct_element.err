@@ -1,1 +1,1 @@
-SemanticError at 2:18: undefined struct type 'Token'
+SemanticError at 2:18: unknown type 'Token'

@@ -378,3 +378,14 @@ add_nova_parser_tool_test(while_loop)
 add_nova_parser_tool_test(struct_decl)
 add_nova_parser_tool_test(vec_decl)
 add_nova_parser_tool_test(nested_blocks)
+
+# step 12
+add_codegen_positive_test(enum_basic)
+add_codegen_positive_test(enum_struct_field)
+add_codegen_positive_test(enum_vec)
+
+add_sema_negative_test(duplicate_enum)
+add_sema_negative_test(duplicate_enum_member)
+add_sema_negative_test(unknown_enum_member)
+add_sema_negative_test(enum_type_mismatch)
+add_sema_negative_test(enum_member_on_unknown_enum)

@@ -10,7 +10,7 @@
 
 static const std::unordered_set<std::string_view> keywords = {
     "fn", "let", "if", "else", "while", "return", 
-    "struct", "vec", "int", "bool", "str", "void", "true", "false"
+    "struct", "enum", "vec", "int", "bool", "str", "void", "true", "false"
 };
 
 
@@ -37,6 +37,14 @@ struct StructInfo {
 };
 
 
+struct EnumInfo {
+    std::string name;
+    SourceLocation location;
+    std::vector<std::string> members;
+    std::unordered_map<std::string, size_t> member_index;
+};
+
+
 struct VariableInfo {
     std::string name;
     Type type;
@@ -52,6 +60,7 @@ public:
     void visit(const FunctionDecl& func) override;
     void visit(const ParamField& param) override;
     void visit(const StructDecl& struct_decl) override;
+    void visit(const EnumDecl& enum_decl) override;
 
     void visit(const BlockStmt& block) override;
     void visit(const LetStmt& stmt) override;
@@ -85,12 +94,14 @@ private:
     const Program* current_program_ = nullptr;
     std::unordered_map<std::string, FunctionSignature> functions_;
     std::unordered_map<std::string, StructInfo> structs_;
+    std::unordered_map<std::string, EnumInfo> enums_;
     std::vector<std::unordered_map<std::string, VariableInfo>> scopes_;
     Type current_return_type_{TypeKind::Void};
     std::string current_function_name_;
     const Type* current_expected_type_ = nullptr;
 
     void collect_struct_declarations(const Program& program);
+    void collect_enum_declarations(const Program& program);
     void collect_function_signatures(const Program& program);
     void install_builtin_functions();
     
@@ -100,7 +111,7 @@ private:
     const VariableInfo& resolve_variable(std::string_view name, const SourceLocation& loc) const;
     Type infer_expr_type(const Expr& expr, const Type* expected_type = nullptr, std::string_view context = "expression");
 
-    void validate_type(const Type& type, const SourceLocation& loc);
+    Type resolve_type(const Type& type, const SourceLocation& loc);
     void expect_type(Type actual, Type expected, const SourceLocation& loc, std::string_view context) const;
     bool is_lvalue(const Expr& expr) const;
     bool is_keyword(std::string_view name) const;

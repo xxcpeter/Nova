@@ -24,6 +24,7 @@ private:
 
     void gen_program(const Program& program);
     void gen_struct_decl(const StructDecl& struct_decl);
+    void gen_enum_decl(const EnumDecl& enum_decl);
     void gen_vec_helpers(const Program& program);
     void gen_function(const FunctionDecl& function);
     void gen_block_contents(const BlockStmt& block);

@@ -108,18 +108,21 @@ std::unique_ptr<Program> Parser::parse_program() {
     SourceLocation location = peek().location;
     std::vector<std::unique_ptr<FunctionDecl>> functions;
     std::vector<std::unique_ptr<StructDecl>> structs;
+    std::vector<std::unique_ptr<EnumDecl>> enums;
     std::unordered_set<Type, TypeHash> vec_types;
     while (!is_at_end()) {
         if (check(TokenType::KW_STRUCT)) {
             structs.push_back(parse_struct());
         } else if (check(TokenType::KW_FN)) {
             functions.push_back(parse_function());
+        } else if (check(TokenType::KW_ENUM)) {
+            enums.push_back(parse_enum());
         } else {
-            throw ParseError("expected function or struct declaration", peek().location);
+            throw ParseError("expected function, struct, or enum declaration", peek().location);
         }
     }
     return std::make_unique<Program>(
-        std::move(name), std::move(functions), std::move(structs), location, vec_types);
+        std::move(name), std::move(functions), std::move(structs), std::move(enums), location, vec_types);
 }
 
 
@@ -182,6 +185,25 @@ StructField Parser::parse_struct_field() {
 }
 
 
+std::unique_ptr<EnumDecl> Parser::parse_enum() {
+    SourceLocation location = peek().location;
+    expect(TokenType::KW_ENUM, "expected 'enum' at the beginning of an enum declaration");
+    std::string name = expect(TokenType::IDENT, "expected enum name").lexeme;
+    expect(TokenType::LBRACE, "expected '{' at the beginning of enum body");
+    
+    std::vector<EnumMember> members;
+    while (!check(TokenType::RBRACE) && !is_at_end()) {
+        SourceLocation member_location = peek().location;
+        std::string member_name = expect(TokenType::IDENT, "expected enum member name").lexeme;
+        expect(TokenType::SEMIC, "expected ';' after enum member");
+        members.emplace_back(std::move(member_name), member_location);
+    }
+    expect(TokenType::RBRACE, "expected '}' at the end of enum body");
+
+    return std::make_unique<EnumDecl>(std::move(name), std::move(members), location);
+}
+
+
 Type Parser::parse_type() {
     if (match(TokenType::KW_INT)) return Type(TypeKind::Int, previous().location);
     if (match(TokenType::KW_BOOL)) return Type(TypeKind::Bool, previous().location);
@@ -190,7 +212,7 @@ Type Parser::parse_type() {
     if (check(TokenType::IDENT)) {
         const Token& token = advance();
         std::string name = token.lexeme;
-        return Type(TypeKind::Struct, token.location, std::move(name));
+        return Type(TypeKind::Named, token.location, std::move(name));
     }
     if (match(TokenType::KW_VEC)) {
         SourceLocation location = previous().location;
@@ -424,12 +446,13 @@ std::unique_ptr<Expr> Parser::parse_unary() {
 
 std::unique_ptr<Expr> Parser::parse_postfix() {
     std::unique_ptr<Expr> expr = parse_primary();
+    SourceLocation location = previous().location;
     while (match(TokenType::DOT)) {
-        SourceLocation location = previous().location;
+        SourceLocation dot_location = previous().location;
         std::string field_name = expect(TokenType::IDENT, "expected field name after '.'").lexeme;
         SourceLocation field_location = previous().location;
         expr = std::make_unique<FieldAccessExpr>(
-            std::move(expr), std::move(field_name), location, field_location);
+            std::move(expr), std::move(field_name), location, field_location, dot_location);
     }
     return expr;
 }

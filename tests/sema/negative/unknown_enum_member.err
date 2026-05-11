@@ -1,0 +1,1 @@
+SemanticError at 6:27: unknown enum member 'Blue' in enum 'Color'

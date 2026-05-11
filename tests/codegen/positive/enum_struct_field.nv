@@ -1,0 +1,25 @@
+enum TokenKind {
+    KW_FN;
+    IDENT;
+    EOF;
+}
+
+struct Token {
+    kind: TokenKind;
+    lexeme: str;
+}
+
+fn main() : void {
+    let t : Token = Token {
+        kind: TokenKind.KW_FN,
+        lexeme: "fn"
+    };
+
+    if (t.kind == TokenKind.KW_FN) {
+        print_str(t.lexeme);
+    } else {
+        print_str("bad");
+    }
+
+    return;
+}

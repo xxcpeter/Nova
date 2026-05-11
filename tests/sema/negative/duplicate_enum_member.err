@@ -1,0 +1,1 @@
+SemanticError at 3:5: duplicate member 'Red' in enum 'Color'

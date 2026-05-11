@@ -11,19 +11,16 @@
 
 
 enum class TypeKind {
-    Int,
-    Bool,
-    Str,
-    Void,
-    Struct,
-    Vec
+    Int, Bool, Str, Void, Vec,
+    Named,
+    Struct, Enum
 };
 
 
 struct Type {
-    TypeKind kind;
+    mutable TypeKind kind;
     SourceLocation location;
-    std::string name; // only used for Struct
+    std::string name; // only used for Struct and Enum
     std::shared_ptr<Type> element_type; // only used for Vec
 
     Type(TypeKind kind, SourceLocation loc = {}, std::string name = "", std::shared_ptr<Type> element_type = nullptr) :
@@ -34,7 +31,7 @@ struct Type {
 struct TypeHash {
     std::size_t operator()(const Type& type) const {
         std::size_t hash = std::hash<int>()(static_cast<int>(type.kind));
-        if (type.kind == TypeKind::Struct) {
+        if (type.kind == TypeKind::Struct || type.kind == TypeKind::Enum) {
             hash ^= std::hash<std::string>{}(type.name);
         }
         if (type.kind == TypeKind::Vec) {
@@ -72,7 +69,7 @@ enum class BinaryOp {
 
 inline bool operator==(const Type& a, const Type& b) {
     if (a.kind != b.kind) return false;
-    if (a.kind == TypeKind::Struct) {
+    if (a.kind == TypeKind::Struct || a.kind == TypeKind::Enum) {
         return a.name == b.name;
     }
     if (a.kind == TypeKind::Vec) {
@@ -88,7 +85,9 @@ inline std::string type_to_string(Type type) {
         case TypeKind::Bool:    return "bool";
         case TypeKind::Str:     return "str";
         case TypeKind::Void:    return "void";
-        case TypeKind::Struct:  return type.name;
+        case TypeKind::Named:
+        case TypeKind::Struct:
+        case TypeKind::Enum:    return type.name;
         case TypeKind::Vec:     return "vec<" + type_to_string(*type.element_type) + ">";
         default:                return "UnknownType";
     }
@@ -139,7 +138,7 @@ struct Decl : ASTNode {
 
 
 struct Stmt : ASTNode {
-    using ASTNode::ASTNode; 
+    using ASTNode::ASTNode;
 };
 
 
@@ -163,6 +162,7 @@ struct ParamField {
     SourceLocation location;
     std::string name;
     Type type;
+    mutable std::optional<Type> resolved_type;
 
     ParamField(std::string name, Type type, SourceLocation loc) : 
         location(loc), name(std::move(name)), type(type) {}
@@ -175,6 +175,7 @@ struct FunctionDecl : Decl {
     std::string name;
     std::vector<ParamField> params;
     Type return_type;
+    mutable std::optional<Type> resolved_return_type;
     std::unique_ptr<BlockStmt> body;
 
     FunctionDecl(std::string name, std::vector<ParamField> params, Type return_type, std::unique_ptr<BlockStmt> body, SourceLocation loc) :
@@ -189,6 +190,7 @@ struct StructField {
     Type type;
     SourceLocation location;
     SourceLocation type_location;
+    mutable std::optional<Type> resolved_type;
 
     StructField(std::string name, Type type, SourceLocation loc, SourceLocation type_loc): 
         name(std::move(name)), type(type), location(loc), type_location(type_loc) {}
@@ -206,15 +208,35 @@ struct StructDecl : Decl {
 };
 
 
+struct EnumMember {
+    std::string name;
+    SourceLocation location;
+
+    EnumMember(std::string name, SourceLocation loc) : name(std::move(name)), location(loc) {}
+};
+
+
+struct EnumDecl : Decl {
+    std::string name;
+    std::vector<EnumMember> members;
+
+    EnumDecl(std::string name, std::vector<EnumMember> members, SourceLocation loc) :
+        Decl(loc), name(std::move(name)), members(std::move(members)) {}
+
+    void accept(ASTVisitor& visitor) const override { visitor.visit(*this); }
+};
+
+
 struct Program : ASTNode {
     std::string name;
     std::vector<std::unique_ptr<FunctionDecl>> functions;
     std::vector<std::unique_ptr<StructDecl>> structs;
+    std::vector<std::unique_ptr<EnumDecl>> enums;
     mutable std::unordered_set<Type, TypeHash> vec_types;
 
     Program(std::string name, std::vector<std::unique_ptr<FunctionDecl>> functions, 
-        std::vector<std::unique_ptr<StructDecl>> structs, SourceLocation loc, std::unordered_set<Type, TypeHash> vec_types) :
-        ASTNode(loc), name(std::move(name)), functions(std::move(functions)), structs(std::move(structs)), vec_types(vec_types) {}
+        std::vector<std::unique_ptr<StructDecl>> structs, std::vector<std::unique_ptr<EnumDecl>> enums, SourceLocation loc, std::unordered_set<Type, TypeHash> vec_types) :
+        ASTNode(loc), name(std::move(name)), functions(std::move(functions)), structs(std::move(structs)), enums(std::move(enums)), vec_types(vec_types) {}
 
     void accept(ASTVisitor& visitor) const override { visitor.visit(*this); }
 };
@@ -223,6 +245,7 @@ struct Program : ASTNode {
 struct LetStmt : Stmt {
     std::string name;
     Type declared_type;
+    mutable std::optional<Type> resolved_type;
     SourceLocation type_location;
     std::unique_ptr<Expr> initializer;
     SourceLocation name_location;
@@ -384,12 +407,22 @@ struct StructLiteralExpr : Expr {
 
 
 struct FieldAccessExpr : Expr {
+    enum FieldAccessKind {
+        StructField,
+        EnumMember,
+        Unresolved
+    };
+    
+    mutable FieldAccessKind access_kind = FieldAccessKind::Unresolved;
+    mutable std::string enum_name;
+
     std::unique_ptr<Expr> object;
     std::string field_name;
     SourceLocation field_location;
+    SourceLocation dot_location;
 
-    FieldAccessExpr(std::unique_ptr<Expr> object, std::string field_name, SourceLocation loc, SourceLocation field_loc) :
-        Expr(loc), object(std::move(object)), field_name(std::move(field_name)), field_location(field_loc) {}
+    FieldAccessExpr(std::unique_ptr<Expr> object, std::string field_name, SourceLocation loc, SourceLocation field_loc, SourceLocation dot_loc) :
+        Expr(loc), object(std::move(object)), field_name(std::move(field_name)), field_location(field_loc), dot_location(dot_loc) {}
 
     void accept(ASTVisitor& visitor) const override { visitor.visit(*this); }
 };

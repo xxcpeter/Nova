@@ -4,9 +4,8 @@
 
 
 void SemanticAnalyzer::collect_struct_declarations(const Program& program) {
-    // forward declare is not allowed
     for (const auto& struct_decl : program.structs) {
-        if (structs_.contains(struct_decl->name)) {
+        if (structs_.contains(struct_decl->name) || enums_.contains(struct_decl->name)) {
             throw SemaError(std::format("duplicate struct '{}'", struct_decl->name), struct_decl->location);
         }
         if (is_keyword(struct_decl->name)) {
@@ -20,14 +19,36 @@ void SemanticAnalyzer::collect_struct_declarations(const Program& program) {
             if (field.type.kind == TypeKind::Struct && struct_decl->name == field.type.name) {
                 throw SemaError(std::format("struct '{}' cannot contain a field of its own type", struct_decl->name), field.type_location);
             }
-            validate_type(field.type, field.type_location);
+            Type field_type = resolve_type(field.type, field.type_location);
             if (struct_info.field_index.contains(field.name)) {
                 throw SemaError(std::format("duplicate field '{}' in struct '{}'", field.name, struct_decl->name), field.location);
             }
+            field.resolved_type = field_type;
             struct_info.field_index.emplace(field.name, struct_info.fields.size());
-            struct_info.fields.push_back(FieldInfo{field.name, field.type, field.location});
+            struct_info.fields.push_back(FieldInfo{field.name, field_type, field.location});
         }
         structs_.emplace(struct_decl->name, std::move(struct_info));
+    }
+}
+
+
+void SemanticAnalyzer::collect_enum_declarations(const Program& program) {
+    for (const auto& enum_decl : program.enums) {
+        if (enums_.contains(enum_decl->name) || structs_.contains(enum_decl->name)) {
+            throw SemaError(std::format("duplicate enum '{}'", enum_decl->name), enum_decl->location);
+        }
+        if (is_keyword(enum_decl->name)) {
+            throw SemaError(std::format("enum name '{}' cannot be a keyword", enum_decl->name), enum_decl->location);
+        }
+        EnumInfo enum_info{ enum_decl->name, enum_decl->location, {}, {} };
+        for (const auto& member : enum_decl->members) {
+            if (enum_info.member_index.contains(member.name)) {
+                throw SemaError(std::format("duplicate member '{}' in enum '{}'", member.name, enum_decl->name), member.location);
+            }
+            enum_info.member_index.emplace(member.name, enum_info.members.size());
+            enum_info.members.push_back(member.name);
+        }
+        enums_.emplace(enum_decl->name, std::move(enum_info));
     }
 }
 
@@ -40,16 +61,18 @@ void SemanticAnalyzer::collect_function_signatures(const Program& program) {
         if (is_keyword(func->name)) {
             throw SemaError(std::format("function name '{}' cannot be a keyword", func->name), func->location);
         }
-        validate_type(func->return_type, func->location);
+        Type return_type = resolve_type(func->return_type, func->location);
+        func->resolved_return_type = return_type;
         std::vector<Type> param_types;
         for (const auto& param : func->params) {
             if (param.type.kind == TypeKind::Void) {
                 throw SemaError("parameter cannot have void type", param.location);
             }
-            validate_type(param.type, param.location);
-            param_types.push_back(param.type);
+            Type param_type = resolve_type(param.type, param.location);
+            param.resolved_type = param_type;
+            param_types.push_back(param_type);
         }
-        functions_.emplace(func->name, FunctionSignature{func->name, param_types, func->return_type, func->location});
+        functions_.emplace(func->name, FunctionSignature{func->name, param_types, return_type, func->location});
     }
 }
 
@@ -105,8 +128,11 @@ void SemanticAnalyzer::declare_variable(std::string_view name, Type type, const 
     if (type.kind == TypeKind::Void) {
         throw SemaError("variable cannot have void type", loc);
     }
-    validate_type(type, loc);
-    current_scope.emplace(std::string(name), VariableInfo{ std::string(name), type, loc });
+    if (structs_.contains(std::string(name)) || enums_.contains(std::string(name))) {
+        throw SemaError(std::format("variable name '{}' conflicts with a type name", name), loc);
+    }
+    Type declared_type = resolve_type(type, loc);
+    current_scope.emplace(std::string(name), VariableInfo{ std::string(name), declared_type, loc });
 }
 
 
@@ -117,7 +143,7 @@ const VariableInfo& SemanticAnalyzer::resolve_variable(std::string_view name, co
             return scope.at(std::string(name));
         }
     }
-    throw SemaError(std::format("undefined variable '{}'", name), loc);
+    throw SemaError(std::format("undefined variable or enum '{}'", name), loc);
 }
 
 
@@ -140,23 +166,36 @@ Type SemanticAnalyzer::infer_expr_type(const Expr& expr, const Type* expected_ty
 }
 
 
-void SemanticAnalyzer::validate_type(const Type& type, const SourceLocation& loc) {
-    if (type.kind == TypeKind::Struct && !structs_.contains(type.name)) {
-        throw SemaError(std::format("undefined struct type '{}'", type.name), loc);
+Type SemanticAnalyzer::resolve_type(const Type& type, const SourceLocation& loc) {
+    switch (type.kind) {
+        case TypeKind::Int:
+        case TypeKind::Bool:
+        case TypeKind::Str:
+        case TypeKind::Void:
+            return type;
+        case TypeKind::Struct:
+        case TypeKind::Enum:
+            return type;
+        case TypeKind::Named: {
+            if (structs_.contains(type.name)) {
+                return Type{ TypeKind::Struct, type.location, type.name };
+            } else if (enums_.contains(type.name)) {
+                return Type{ TypeKind::Enum, type.location, type.name };
+            }
+            throw SemaError(std::format("unknown type '{}'", type.name), loc);
+        }
+        case TypeKind::Vec: {
+            Type elem = resolve_type(*type.element_type, type.element_type->location);
+            if (elem == TypeKind::Void) {
+                throw SemaError("vector element type cannot be void", type.element_type->location);
+            }
+            if (elem.kind == TypeKind::Vec) {
+                throw SemaError("vector element type cannot be a vector", type.element_type->location);
+            }
+            return Type{ TypeKind::Vec, type.location, "", std::make_shared<Type>(elem) };
+        }
     }
-    if (type.kind == TypeKind::Vec) {
-        if (!type.element_type) {
-            throw SemaError("vector type must specify element type", loc);
-        }
-        if (type.element_type->kind == TypeKind::Void) {
-            throw SemaError("vector element type cannot be void", type.element_type->location);
-        }
-        if (type.element_type->kind == TypeKind::Vec) {
-            throw SemaError("vector element type cannot be vec", type.element_type->location);
-        }
-        validate_type(*type.element_type, type.element_type->location);
-        current_program_->vec_types.insert(*type.element_type);
-    }
+    throw SemaError("unknown type", loc);
 }
 
 
@@ -188,6 +227,7 @@ void SemanticAnalyzer::analyze(const Program& program) {
 
 void SemanticAnalyzer::visit(const Program& program) {
     install_builtin_functions();
+    collect_enum_declarations(program);
     collect_struct_declarations(program);
     collect_function_signatures(program);
     
@@ -199,12 +239,16 @@ void SemanticAnalyzer::visit(const Program& program) {
 
 void SemanticAnalyzer::visit(const FunctionDecl& func) {
     current_function_name_ = func.name;
-    current_return_type_ = func.return_type;
+    current_return_type_ = functions_.at(func.name).return_type;
 
     push_scope();
 
-    for (const auto& param : func.params) {
-        declare_variable(param.name, param.type, param.location);
+    for (size_t i = 0; i < func.params.size(); ++i) {
+        declare_variable(
+            func.params[i].name,
+            functions_.at(func.name).param_types[i],
+            func.params[i].location
+        );
     }
     
     bool body_returns = false;
@@ -218,12 +262,11 @@ void SemanticAnalyzer::visit(const FunctionDecl& func) {
 
     pop_scope();
 
-    if (func.return_type != Type{ TypeKind::Void } && !body_returns) {
+    if (functions_.at(func.name).return_type != Type{ TypeKind::Void } && !body_returns) {
         throw SemaError(std::format("missing return statement in function '{}'", func.name), func.location);
     }
 
     last_stmt_returns_ = false;
-    // todo: check for missing return statement in non-void functions
 }
 
 
@@ -231,6 +274,9 @@ void SemanticAnalyzer::visit(const ParamField&) {}
 
 
 void SemanticAnalyzer::visit(const StructDecl&) {}
+
+
+void SemanticAnalyzer::visit(const EnumDecl&) {}
 
 
 void SemanticAnalyzer::visit(const BlockStmt& block) {
@@ -251,12 +297,11 @@ void SemanticAnalyzer::visit(const BlockStmt& block) {
 
 
 void SemanticAnalyzer::visit(const LetStmt& stmt) {
-    if (stmt.declared_type.kind == TypeKind::Struct && !structs_.contains(stmt.declared_type.name)) {
-        throw SemaError(std::format("undefined struct type '{}'", stmt.declared_type.name), stmt.type_location);
-    }
+    Type declared_type = resolve_type(stmt.declared_type, stmt.type_location);
+    stmt.resolved_type = declared_type;
 
-    infer_expr_type(*stmt.initializer, &stmt.declared_type, "variable initializer");
-    declare_variable(stmt.name, stmt.declared_type, stmt.name_location);
+    infer_expr_type(*stmt.initializer, &declared_type, "variable initializer");
+    declare_variable(stmt.name, declared_type, stmt.name_location);
     last_stmt_returns_ = false;
 }
 
@@ -301,6 +346,7 @@ void SemanticAnalyzer::visit(const ReturnStmt& stmt) {
         }
         
         Type value_type = infer_expr_type(*stmt.value, &current_return_type_, "return statement");
+        current_return_type_ = value_type;
     } else {
         if (current_return_type_ != Type{ TypeKind::Void }) {
             throw SemaError(std::format("non-void function {} must return a value", current_function_name_), stmt.location);
@@ -485,20 +531,36 @@ void SemanticAnalyzer::visit(const StructLiteralExpr& expr) {
 
 
 void SemanticAnalyzer::visit(const FieldAccessExpr& expr) {
+    if (auto* ident = dynamic_cast<const IdentifierExpr*>(expr.object.get())) {
+        if (enums_.contains(ident->name)) {
+            const auto& enum_info = enums_.at(ident->name);
+            if (!enum_info.member_index.contains(expr.field_name)) {
+                throw SemaError(std::format("unknown enum member '{}' in enum '{}'", expr.field_name, ident->name), expr.field_location);
+            }
+            expr.access_kind = FieldAccessExpr::FieldAccessKind::EnumMember;
+            expr.enum_name = ident->name;
+            last_type_ = Type(TypeKind::Enum, expr.location, ident->name);
+            return;
+        }
+    }
+
     Type object_type = infer_expr_type(*expr.object);
+    
+    if (object_type.kind == TypeKind::Struct) {
+        if (!structs_.contains(object_type.name)) {
+            throw SemaError(std::format("undefined struct type '{}'", object_type.name), expr.object->location);
+        }
+        const auto& struct_info = structs_.at(object_type.name);
 
-    if (object_type.kind != TypeKind::Struct) {
-        throw SemaError("field access on non-struct type", expr.object->location);
+        if (!struct_info.field_index.contains(expr.field_name)) {
+            throw SemaError(std::format("unknown field '{}' in struct '{}'", expr.field_name, object_type.name), expr.field_location);
+        }
+        expr.access_kind = FieldAccessExpr::FieldAccessKind::StructField;
+        last_type_ = struct_info.fields[struct_info.field_index.at(expr.field_name)].type;
+        return;
     }
-    if (!structs_.contains(object_type.name)) {
-        throw SemaError(std::format("undefined struct type '{}'", object_type.name), expr.object->location);
-    }
-    const auto& struct_info = structs_.at(object_type.name);
 
-    if (!struct_info.field_index.contains(expr.field_name)) {
-        throw SemaError(std::format("unknown field '{}' in struct '{}'", expr.field_name, object_type.name), expr.field_location);
-    }
-    last_type_ = struct_info.fields[struct_info.field_index.at(expr.field_name)].type;
+    throw SemaError("field access on non-struct/enum type", expr.object->location);
 }
 
 
@@ -511,8 +573,8 @@ void SemanticAnalyzer::visit_vec_new(const CallExpr& expr) {
         throw SemaError("cannot infer element type for vec_new", expr.location);
     }
 
-    validate_type(*current_expected_type_, current_expected_type_->location);
-    last_type_ = *current_expected_type_;
+    Type resolved_type = resolve_type(*current_expected_type_, current_expected_type_->location);
+    last_type_ = resolved_type;
 }
 
 

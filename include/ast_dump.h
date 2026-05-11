@@ -49,6 +49,15 @@ public:
         indent_ -= 2;
     }
 
+    void visit(const EnumDecl& enum_decl) override {
+        os << std::string(indent_, ' ') << "EnumDecl name=" << enum_decl.name << "\n";
+        indent_ += 2;
+        for (const auto& member : enum_decl.members) {
+            os << std::string(indent_, ' ') << "EnumMember name=" << member.name << "\n";
+        }
+        indent_ -= 2;
+    }
+
     void visit(const BlockStmt& block) override {
         os << std::string(indent_, ' ') << "BlockStmt\n";
         indent_ += 2;

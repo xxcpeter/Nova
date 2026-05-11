@@ -1,1 +1,1 @@
-SemanticError at 3:15: field access on non-struct type
+SemanticError at 3:15: field access on non-struct/enum type
