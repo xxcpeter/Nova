@@ -1,0 +1,4 @@
+fn id(x: int) : int {
+    let y : int = x;
+    return y;
+}

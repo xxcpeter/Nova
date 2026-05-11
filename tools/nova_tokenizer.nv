@@ -35,14 +35,6 @@ fn make_token(kind: str, lexeme: str, line: int, column: int) : Token {
 }
 
 
-// struct LexerState {
-//     source: str;
-//     pos: int;
-//     line: int;
-//     column: int;
-//     tokens: vec<Token>;
-// }
-
 fn peek_str (source : str, pos : int) : int {
     if (pos >= str_len(source)) {
         return 0; // null character to indicate EOF
@@ -146,13 +138,15 @@ fn read_symbol (source : str, pos : int) : str {
         if (peek_str(source, pos + 1) == 38) { // '&&'
             return "&&";
         } else {
-            runtime_error("lexer error: unrecognized symbol '&'");
+            nova_runtime_error("lexer error: unrecognized symbol '&'");
+            return "&";
         }
     } else if (c == 124) { // '|'
         if (peek_str(source, pos + 1) == 124) { // '||'
             return "||";
         } else {
-            runtime_error("lexer error: unrecognized symbol '|'");
+            nova_runtime_error("lexer error: unrecognized symbol '|'");
+            return "|";
         }
     } else {
         return str_slice(source, pos, pos + 1);

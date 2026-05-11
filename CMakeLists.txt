@@ -223,6 +223,22 @@ function(add_nova_tokenizer_tool_test name)
     set_tests_properties(nova_tool_tokenizer_${name} PROPERTIES LABELS "nova_tool;tokenizer")
 endfunction()
 
+function(add_nova_parser_tool_test name)
+    add_test(
+        NAME nova_tool_parser_${name}
+        COMMAND ${CMAKE_COMMAND}
+            -DNOVA_COMPILE=$<TARGET_FILE:nova_compile>
+            -DTOOL_SOURCE=${CMAKE_CURRENT_SOURCE_DIR}/tools/nova_parser.nv
+            -DINPUT=${CMAKE_CURRENT_SOURCE_DIR}/tests/tools/parser/${name}.nv
+            -DEXPECT=${CMAKE_CURRENT_SOURCE_DIR}/tests/tools/parser/${name}.out
+            -DRUNTIME_DIR=${CMAKE_CURRENT_SOURCE_DIR}/runtime
+            -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/nova_tool_tests/parser_${name}
+            -DCC=cc
+            -P ${NOVA_TOOL_TEST_DRIVER}
+    )
+    set_tests_properties(nova_tool_parser_${name} PROPERTIES LABELS "nova_tool;parser")
+endfunction()
+
 
 # step 2
 add_lexer_positive_test(single_tokens)
@@ -353,3 +369,12 @@ add_nova_tokenizer_tool_test(basic)
 add_nova_tokenizer_tool_test(struct_vec)
 add_nova_tokenizer_tool_test(field_access)
 add_nova_tokenizer_tool_test(strings_comments)
+
+# step 11
+add_nova_parser_tool_test(minimal_function)
+add_nova_parser_tool_test(let_return)
+add_nova_parser_tool_test(if_else)
+add_nova_parser_tool_test(while_loop)
+add_nova_parser_tool_test(struct_decl)
+add_nova_parser_tool_test(vec_decl)
+add_nova_parser_tool_test(nested_blocks)

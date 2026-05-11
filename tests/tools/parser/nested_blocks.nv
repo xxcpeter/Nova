@@ -1,0 +1,8 @@
+fn main() : void {
+    let x : int = 1;
+    {
+        let x : int = 2;
+        print_int(x);
+    }
+    return;
+}

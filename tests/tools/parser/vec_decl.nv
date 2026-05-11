@@ -1,0 +1,9 @@
+struct Token {
+    kind: str;
+}
+
+fn main() : void {
+    let tokens : vec<Token> = vec_new();
+    vec_push(tokens, Token { kind: "fn" });
+    return;
+}

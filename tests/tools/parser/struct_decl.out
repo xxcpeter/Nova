@@ -1,0 +1,8 @@
+Program
+  Struct name=Token
+    Field name=kind type=str
+    Field name=line type=int
+    Field name=column type=int
+  Function name=main return=void
+    Block
+      ReturnStmt

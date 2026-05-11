@@ -1,0 +1,8 @@
+Program
+  Function name=main return=void
+    Block
+      LetStmt name=i type=int
+      WhileStmt
+        Block
+          ExprStmt
+      ReturnStmt

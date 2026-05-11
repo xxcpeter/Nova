@@ -1,0 +1,9 @@
+struct Token {
+    kind: str;
+    line: int;
+    column: int;
+}
+
+fn main() : void {
+    return;
+}

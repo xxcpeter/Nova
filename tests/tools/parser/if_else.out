@@ -1,0 +1,11 @@
+Program
+  Function name=choose return=int
+    Param name=flag type=bool
+    Block
+      IfStmt
+        Then
+          Block
+            ReturnStmt value
+        Else
+          Block
+            ReturnStmt value
