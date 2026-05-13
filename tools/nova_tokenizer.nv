@@ -1,3 +1,55 @@
+enum TokenKind {
+    KW_FN;
+    KW_LET;
+    KW_IF;
+    KW_ELSE;
+    KW_WHILE;
+    KW_RETURN;
+    KW_STRUCT;
+    KW_ENUM;
+    KW_VEC;
+    KW_INT;
+    KW_BOOL;
+    KW_STR;
+    KW_VOID;
+    KW_TRUE;
+    KW_FALSE;
+
+    IDENT;
+    INT_LITERAL;
+    STR_LITERAL;
+
+    LPAREN;
+    RPAREN;
+    LBRACE;
+    RBRACE;
+    COMMA;
+    SEMIC;
+    COLON;
+    DOT;
+
+    ASSIGN;
+    PLUS;
+    MINUS;
+    STAR;
+    SLASH;
+    PERCENT;
+
+    LT;
+    GT;
+    LE;
+    GE;
+    EQ_EQ;
+    BANG_EQ;
+    AND_AND;
+    OR_OR;
+    BANG;
+
+    EndOfFile;
+    INVALID;
+}
+
+
 fn is_digit (c : int) : bool {
     return c >= 48 && c <= 57;
 }
@@ -24,20 +76,111 @@ fn is_whitespace (c : int) : bool {
 
 
 struct Token {
-    kind: str;
+    kind: TokenKind;
     lexeme: str;
     line: int;
     column: int;
 }
 
-fn make_token(kind: str, lexeme: str, line: int, column: int) : Token {
+fn make_token(kind: TokenKind, lexeme: str, line: int, column: int) : Token {
     return Token{ kind : kind , lexeme : lexeme , line : line , column : column };
+}
+
+
+fn token_kind_name(kind: TokenKind) : str {
+    if (kind == TokenKind.KW_FN) {
+        return "KW_FN";
+    } else if (kind == TokenKind.KW_LET) {
+        return "KW_LET";
+    } else if (kind == TokenKind.KW_IF) {
+        return "KW_IF";
+    } else if (kind == TokenKind.KW_ELSE) {
+        return "KW_ELSE";
+    } else if (kind == TokenKind.KW_WHILE) {
+        return "KW_WHILE";
+    } else if (kind == TokenKind.KW_RETURN) {
+        return "KW_RETURN";
+    } else if (kind == TokenKind.KW_STRUCT) {
+        return "KW_STRUCT";
+    } else if (kind == TokenKind.KW_ENUM) {
+        return "KW_ENUM";
+    } else if (kind == TokenKind.KW_VEC) {
+        return "KW_VEC";
+    } else if (kind == TokenKind.KW_INT) {
+        return "KW_INT";
+    } else if (kind == TokenKind.KW_BOOL) {
+        return "KW_BOOL";
+    } else if (kind == TokenKind.KW_STR) {
+        return "KW_STR";
+    } else if (kind == TokenKind.KW_VOID) {
+        return "KW_VOID";
+    } else if (kind == TokenKind.KW_TRUE) {
+        return "KW_TRUE";
+    } else if (kind == TokenKind.KW_FALSE) {
+        return "KW_FALSE";
+    } else if (kind == TokenKind.IDENT) {
+        return "IDENT";
+    } else if (kind == TokenKind.INT_LITERAL) {
+        return "INT_LITERAL";
+    } else if (kind == TokenKind.STR_LITERAL) {
+        return "STR_LITERAL";
+    } else if (kind == TokenKind.LPAREN) {
+        return "LPAREN";
+    } else if (kind == TokenKind.RPAREN) {
+        return "RPAREN";
+    } else if (kind == TokenKind.LBRACE) {
+        return "LBRACE";
+    } else if (kind == TokenKind.RBRACE) {
+        return "RBRACE";
+    } else if (kind == TokenKind.COMMA) {
+        return "COMMA";
+    } else if (kind == TokenKind.SEMIC) {
+        return "SEMIC";
+    } else if (kind == TokenKind.COLON) {
+        return "COLON";
+    } else if (kind == TokenKind.DOT) {
+        return "DOT";
+    } else if (kind == TokenKind.ASSIGN) {
+        return "ASSIGN";
+    } else if (kind == TokenKind.PLUS) {
+        return "PLUS";
+    } else if (kind == TokenKind.MINUS) {
+        return "MINUS";
+    } else if (kind == TokenKind.STAR) {
+        return "STAR";
+    } else if (kind == TokenKind.SLASH) {
+        return "SLASH";
+    } else if (kind == TokenKind.PERCENT) {
+        return "PERCENT";
+    } else if (kind == TokenKind.LT) {
+        return "LT";
+    } else if (kind == TokenKind.GT) {
+        return "GT";
+    } else if (kind == TokenKind.LE) {
+        return "LE";
+    } else if (kind == TokenKind.GE) {
+        return "GE";
+    } else if (kind == TokenKind.EQ_EQ) {
+        return "EQ_EQ";
+    } else if (kind == TokenKind.BANG_EQ) {
+        return "BANG_EQ";
+    } else if (kind == TokenKind.AND_AND) {
+        return "AND_AND";
+    } else if (kind == TokenKind.OR_OR) {
+        return "OR_OR";
+    } else if (kind == TokenKind.BANG) {
+        return "BANG";
+    } else if (kind == TokenKind.EndOfFile) {
+        return "EndOfFile";
+    } else {
+        return "UNKNOWN";
+    }
 }
 
 
 fn peek_str (source : str, pos : int) : int {
     if (pos >= str_len(source)) {
-        return 0; // null character to indicate EOF
+        return 0; // null character to indicate EndOfFile
     }
     return str_get(source, pos);
 }
@@ -57,11 +200,12 @@ fn skip_whitespace_and_comment (source : str, pos : int) : int {
                 pos = pos + 2;
                 while (!(peek_str(source, pos) == 42 && peek_str(source, pos + 1) == 47)) { // until '*/'
                     if (pos >= str_len(source)) {
-                        return -1; // EOF in comment
+                        nova_runtime_error("lexer error: EndOfFile in comment");
+                        return -1;
                     }
                     pos = pos + 1;
                 }
-                pos = pos + 2; // skip '*/'
+                pos = pos + 2;
             } else {
                 return pos;
             }
@@ -74,15 +218,15 @@ fn skip_whitespace_and_comment (source : str, pos : int) : int {
 
 fn read_str(source : str, pos : int) : str {
     let start : int = pos;
-    pos = pos + 1; // skip opening quote
-    while (peek_str(source, pos) != 34) { // until closing quote
-        if (pos >= str_len(source) || peek_str(source, pos) == 10) { // newline or EOF in string
-            return "unterminated string literal"; // EOF in string
+    pos = pos + 1;
+    while (peek_str(source, pos) != 34) {
+        if (pos >= str_len(source) || peek_str(source, pos) == 10) {
+            nova_runtime_error("lexer error: unterminated string literal");
         }
-        if (peek_str(source, pos) == 92) { // backslash
-            pos = pos + 1; // skip escape sequence
-            if (pos >= str_len(source) || peek_str(source, pos) == 10) { // newline or EOF in string
-                return "unterminated string literal"; // EOF in string
+        if (peek_str(source, pos) == 92) {
+            pos = pos + 1;
+            if (pos >= str_len(source) || peek_str(source, pos) == 10) {
+                nova_runtime_error("lexer error: unterminated string literal");
             }
             pos = pos + 1;
         } else {
@@ -155,9 +299,7 @@ fn read_symbol (source : str, pos : int) : str {
 
 fn next_token (source : str, pos : int) : str {
     let c : int = peek_str(source, pos);
-    if (c == 0) {
-        return "\0"; // EndOfFile token
-    } else if (c == 34) { // '"'
+    if (c == 34) { // '"'
         return read_str(source, pos);
     } else if (is_ident_start(c)) {
         return read_ident(source, pos);
@@ -168,90 +310,92 @@ fn next_token (source : str, pos : int) : str {
     }
 }
 
-fn classify_token (lexeme : str) : str {
+fn classify_token (lexeme : str) : TokenKind {
     if (str_eq(lexeme, "fn")) {
-        return "KW_FN";
+        return TokenKind.KW_FN;
     } else if (str_eq(lexeme, "let")) {
-        return "KW_LET";
+        return TokenKind.KW_LET;
     } else if (str_eq(lexeme, "if")) {
-        return "KW_IF";
+        return TokenKind.KW_IF;
     } else if (str_eq(lexeme, "else")) {
-        return "KW_ELSE";
+        return TokenKind.KW_ELSE;
     } else if (str_eq(lexeme, "while")) {
-        return "KW_WHILE";
+        return TokenKind.KW_WHILE;
     } else if (str_eq(lexeme, "return")) {
-        return "KW_RETURN";
+        return TokenKind.KW_RETURN;
     } else if (str_eq(lexeme, "struct")) {
-        return "KW_STRUCT";
+        return TokenKind.KW_STRUCT;
+    } else if (str_eq(lexeme, "enum")) {
+        return TokenKind.KW_ENUM;
     } else if (str_eq(lexeme, "vec")) {
-        return "KW_VEC";
+        return TokenKind.KW_VEC;
     } else if (str_eq(lexeme, "true")) {
-        return "KW_TRUE";
+        return TokenKind.KW_TRUE;
     } else if (str_eq(lexeme, "false")) {
-        return "KW_FALSE";
+        return TokenKind.KW_FALSE;
     } else if (str_eq(lexeme, "int")) {
-        return "KW_INT";
+        return TokenKind.KW_INT;
     } else if (str_eq(lexeme, "bool")) {
-        return "KW_BOOL";
+        return TokenKind.KW_BOOL;
     } else if (str_eq(lexeme, "str")) {
-        return "KW_STR";
+        return TokenKind.KW_STR;
     } else if (str_eq(lexeme, "void")) {
-        return "KW_VOID";
+        return TokenKind.KW_VOID;
     } else if (str_eq(lexeme, "+")) {
-        return "PLUS";
+        return TokenKind.PLUS;
     } else if (str_eq(lexeme, "-")) {
-        return "MINUS";
+        return TokenKind.MINUS;
     } else if (str_eq(lexeme, "*")) {
-        return "STAR";
+        return TokenKind.STAR;
     } else if (str_eq(lexeme, "/")) {
-        return "SLASH";
+        return TokenKind.SLASH;
     } else if (str_eq(lexeme, "%")) {
-        return "PERCENT";
+        return TokenKind.PERCENT;
     } else if (str_eq(lexeme, "=")) {
-        return "ASSIGN";
+        return TokenKind.ASSIGN;
     } else if (str_eq(lexeme, "==")) {
-        return "EQ_EQ";
+        return TokenKind.EQ_EQ;
     } else if (str_eq(lexeme, "!=")) {
-        return "BANG_EQ";
+        return TokenKind.BANG_EQ;
     } else if (str_eq(lexeme, "<")) {
-        return "LT";
+        return TokenKind.LT;
     } else if (str_eq(lexeme, "<=")) {
-        return "LE";
+        return TokenKind.LE;
     } else if (str_eq(lexeme, ">")) {
-        return "GT";
+        return TokenKind.GT;
     } else if (str_eq(lexeme, ">=")) {
-        return "GE";
+        return TokenKind.GE;
     } else if (str_eq(lexeme, "&&")) {
-        return "AND_AND";
+        return TokenKind.AND_AND;
     } else if (str_eq(lexeme, "||")) {
-        return "OR_OR";
+        return TokenKind.OR_OR;
     } else if (str_eq(lexeme, "!")) {
-        return "BANG";
+        return TokenKind.BANG;
     } else if (str_eq(lexeme, "(")) {
-        return "LPAREN";
+        return TokenKind.LPAREN;
     } else if (str_eq(lexeme, ")")) {
-        return "RPAREN";
+        return TokenKind.RPAREN;
     } else if (str_eq(lexeme, "{")) {
-        return "LBRACE";
+        return TokenKind.LBRACE;
     } else if (str_eq(lexeme, "}")) {
-        return "RBRACE";
+        return TokenKind.RBRACE;
     } else if (str_eq(lexeme, ".")) {
-        return "DOT";
+        return TokenKind.DOT;
     } else if (str_eq(lexeme, ",")) {
-        return "COMMA";
+        return TokenKind.COMMA;
     } else if (str_eq(lexeme, ";")) {
-        return "SEMIC";
+        return TokenKind.SEMIC;
     } else if (str_eq(lexeme, ":")) {
-        return "COLON";
+        return TokenKind.COLON;
     } else if (is_ident_start(peek_str(lexeme, 0))) {
-        return "IDENT";
+        return TokenKind.IDENT;
     } else if (is_digit(peek_str(lexeme, 0))) {
-        return "INT_LITERAL";
+        return TokenKind.INT_LITERAL;
     } else if (str_starts_with(lexeme, "\"")) {
-        return "STR_LITERAL";
+        return TokenKind.STR_LITERAL;
     } else {
         nova_runtime_error(str_concat(str_concat("lexer error: unrecognized token '", lexeme), "'"));
-        return "INVALID";
+        return TokenKind.INVALID;
     }
 }
 
@@ -291,7 +435,7 @@ fn tokenize(source: str) : vec<Token> {
             column = column + token_length;
         }
     }
-    vec_push(tokens, make_token("EndOfFile", "", line, column));
+    vec_push(tokens, make_token(TokenKind.EndOfFile, "", line, column));
     return tokens;
 }
 
@@ -302,7 +446,7 @@ fn dump_tokens(tokens: vec<Token>) : str {
     
     while (i < vec_len(tokens)) {
         let token : Token = vec_get(tokens, i);
-        buf_push_str(output, token.kind);
+        buf_push_str(output, token_kind_name(token.kind));
         buf_push_str(output, "(\"");
         buf_push_str(output, token.lexeme);
         buf_push_str(output, "\") at ");

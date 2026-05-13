@@ -73,46 +73,104 @@ void CCodeGenerator::gen_program(const Program& program) {
     emit_line("#include <stdbool.h>");
     emit_line("#include \"nova_runtime.h\"");
     emit_line();
+    
+    gen_enum_decls(program);
+
+    gen_struct_forward_declarations(program);
+    gen_vec_forward_declarations(program);
+
+    gen_struct_definitions(program);
+    gen_vec_struct_definitions(program);
+    gen_vec_helper_functions(program);
+    
+    gen_function_prototype(program);
+    gen_function_definition(program);
+}
+
+
+void CCodeGenerator::gen_enum_decls(const Program& program) {
     for (const auto& enum_decl : program.enums) {
-        gen_enum_decl(*enum_decl);
+        emit_line("typedef enum " + enum_decl->name + " {");
+        indent();
+        for (const auto& member : enum_decl->members) {
+            emit_line(enum_decl->name + "_" + member.name + ",");
+        }
+        dedent();
+        emit_line("} " + enum_decl->name + ";");
         emit_line();
     }
+}
+
+
+void CCodeGenerator::gen_struct_forward_declarations(const Program& program) {
     for (const auto& struct_decl : program.structs) {
-        gen_struct_decl(*struct_decl);
+        emit_line("typedef struct " + struct_decl->name + " " + struct_decl->name + ";");
+    }
+    emit_line();
+}
+
+
+void CCodeGenerator::gen_vec_forward_declarations(const Program& program) {
+    for (const auto& vec_type : program.vec_types) {
+        std::string type_name;
+        switch (vec_type.kind) {
+            case TypeKind::Int: type_name = "int"; break;
+            case TypeKind::Str: type_name = "str"; break;
+            case TypeKind::Bool: type_name = "bool"; break;
+            case TypeKind::Struct: 
+            case TypeKind::Enum: 
+                type_name = vec_type.name; break;
+            default: throw std::runtime_error("Invalid vector element type " + type_to_string(vec_type));
+        }
+        emit_line("typedef struct NovaVec_" + type_name + " NovaVec_" + type_name + ";");
+    }
+    emit_line();
+}
+
+
+void CCodeGenerator::gen_struct_definitions(const Program& program) {
+    for (const auto& struct_decl : program.structs) {
+        emit_line("struct " + struct_decl->name + " {");
+        indent();
+        for (const auto& field : struct_decl->fields) {
+            emit_line(c_type(*field.resolved_type) + " " + field.name + ";");
+        }
+        dedent();
+        emit_line("};");
         emit_line();
     }
-    gen_vec_helpers(program);
-    for (const auto& function : program.functions) {
-        gen_function(*function);
+}
+
+
+void CCodeGenerator::gen_vec_struct_definitions(const Program& program) {
+    std::vector<Type> sorted_vec_types(program.vec_types.begin(), program.vec_types.end());
+    std::sort(sorted_vec_types.begin(), sorted_vec_types.end(), [](const Type& a, const Type& b) {
+        return type_to_string(a) < type_to_string(b);
+    });
+    for (const auto& vec_type : sorted_vec_types) {
+        std::string type_name;
+        switch (vec_type.kind) {
+            case TypeKind::Int: type_name = "int"; break;
+            case TypeKind::Str: type_name = "str"; break;
+            case TypeKind::Bool: type_name = "bool"; break;
+            case TypeKind::Struct: 
+            case TypeKind::Enum: 
+                type_name = vec_type.name; break;
+            default: throw std::runtime_error("Invalid vector element type " + type_to_string(vec_type));
+        }
+        emit_line("struct NovaVec_" + type_name + " {");
+        indent();
+        emit_line(c_type(vec_type) + "* data;");
+        emit_line("size_t len;");
+        emit_line("size_t cap;");
+        dedent();
+        emit_line("};");
         emit_line();
     }
 }
 
 
-void CCodeGenerator::gen_struct_decl(const StructDecl& struct_decl) {
-    emit_line("typedef struct " + struct_decl.name + " " + struct_decl.name + ";");
-    emit_line("struct " + struct_decl.name + " {");
-    indent();
-    for (const auto& field : struct_decl.fields) {
-        emit_line(c_type(*field.resolved_type) + " " + field.name + ";");
-    }
-    dedent();
-    emit_line("};");
-}
-
-
-void CCodeGenerator::gen_enum_decl(const EnumDecl& enum_decl) {
-    emit_line("typedef enum " + enum_decl.name + " {");
-    indent();
-    for (const auto& member : enum_decl.members) {
-        emit_line(enum_decl.name + "_" + member.name + ",");
-    }
-    dedent();
-    emit_line("} " + enum_decl.name + ";");
-}
-
-
-void CCodeGenerator::gen_vec_helpers(const Program& program) {
+void CCodeGenerator::gen_vec_helper_functions(const Program& program) {
     std::vector<Type> sorted_vec_types(program.vec_types.begin(), program.vec_types.end());
     std::sort(sorted_vec_types.begin(), sorted_vec_types.end(), [](const Type& a, const Type& b) {
         return type_to_string(a) < type_to_string(b);
@@ -128,14 +186,6 @@ void CCodeGenerator::gen_vec_helpers(const Program& program) {
                 type_name = type.name; break;
             default: throw std::runtime_error("Invalid vector element type " + type_to_string(type));
         }
-        emit_line("typedef struct NovaVec_" + type_name + " {");
-        indent();
-        emit_line(c_type(type) + "* data;");
-        emit_line("size_t len;");
-        emit_line("size_t cap;");
-        dedent();
-        emit_line("} NovaVec_" + type_name + ";");
-        emit_line();
 
         emit_line("static NovaVec_" + type_name + "* nova_vec_new_" + type_to_string(type) + "(void) {");
         indent();
@@ -196,23 +246,41 @@ void CCodeGenerator::gen_vec_helpers(const Program& program) {
 }
 
 
-void CCodeGenerator::gen_function(const FunctionDecl& function) {
-    current_function_name_ = function.name;
-    if (function.name == "main") {
-        emit_line("int main(int argc, char** argv) {");
-        emit_line("    nova_runtime_init(argc, argv);");
-    } else {
-        std::string params;
-        for (const auto& param : function.params) {
-            params += c_type(*param.resolved_type) + " " + param.name;
-            if (&param != &function.params.back()) params += ", ";
+void CCodeGenerator::gen_function_prototype(const Program& program) {
+    for (const auto& func_decl : program.functions) {
+        if (func_decl->name != "main") {
+            std::string params;
+            for (const auto& param : func_decl->params) {
+                params += c_type(*param.resolved_type) + " " + param.name;
+                if (&param != &func_decl->params.back()) params += ", ";
+            }
+            emit_line(c_type(*func_decl->resolved_return_type) + " " + func_decl->name + "(" + params + ");");
         }
-        emit_line(c_type(*function.resolved_return_type) + " " + function.name + "(" + params + ") {");
     }
-    indent();
-    gen_block_contents(*function.body);
-    dedent();
-    emit_line("}");
+    emit_line();
+}
+
+
+void CCodeGenerator::gen_function_definition(const Program& program) {
+    for (const auto& func_decl : program.functions) {
+        current_function_name_ = func_decl->name;
+        if (func_decl->name == "main") {
+            emit_line("int main(int argc, char** argv) {");
+            emit_line("    nova_runtime_init(argc, argv);");
+        } else {
+            std::string params;
+            for (const auto& param : func_decl->params) {
+                params += c_type(*param.resolved_type) + " " + param.name;
+                if (&param != &func_decl->params.back()) params += ", ";
+            }
+            emit_line(c_type(*func_decl->resolved_return_type) + " " + func_decl->name + "(" + params + ") {");
+        }
+        indent();
+        gen_block_contents(*func_decl->body);
+        dedent();
+        emit_line("}");
+        emit_line();
+    }
 }
 
 

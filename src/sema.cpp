@@ -11,15 +11,19 @@ void SemanticAnalyzer::collect_struct_declarations(const Program& program) {
         if (is_keyword(struct_decl->name)) {
             throw SemaError(std::format("struct name '{}' cannot be a keyword", struct_decl->name), struct_decl->location);
         }
-        StructInfo struct_info{ struct_decl->name, struct_decl->location, {}, {} };
+        structs_.emplace(struct_decl->name, StructInfo{ struct_decl->name, struct_decl->location, {}, {} });
+    }
+
+    for (const auto& struct_decl : program.structs) {
+        auto& struct_info = structs_.at(struct_decl->name);
         for (const auto& field : struct_decl->fields) {
-            if (field.type.kind == TypeKind::Void) {
+            Type field_type = resolve_type(field.type, field.type_location);
+            if (field_type.kind == TypeKind::Void) {
                 throw SemaError(std::format("field '{}' in struct '{}' cannot have void type", field.name, struct_decl->name), field.location);
             }
-            if (field.type.kind == TypeKind::Struct && struct_decl->name == field.type.name) {
+            if (field_type.kind == TypeKind::Struct && struct_decl->name == field_type.name) {
                 throw SemaError(std::format("struct '{}' cannot contain a field of its own type", struct_decl->name), field.type_location);
             }
-            Type field_type = resolve_type(field.type, field.type_location);
             if (struct_info.field_index.contains(field.name)) {
                 throw SemaError(std::format("duplicate field '{}' in struct '{}'", field.name, struct_decl->name), field.location);
             }
@@ -27,7 +31,6 @@ void SemanticAnalyzer::collect_struct_declarations(const Program& program) {
             struct_info.field_index.emplace(field.name, struct_info.fields.size());
             struct_info.fields.push_back(FieldInfo{field.name, field_type, field.location});
         }
-        structs_.emplace(struct_decl->name, std::move(struct_info));
     }
 }
 
@@ -40,7 +43,11 @@ void SemanticAnalyzer::collect_enum_declarations(const Program& program) {
         if (is_keyword(enum_decl->name)) {
             throw SemaError(std::format("enum name '{}' cannot be a keyword", enum_decl->name), enum_decl->location);
         }
-        EnumInfo enum_info{ enum_decl->name, enum_decl->location, {}, {} };
+        enums_.emplace(enum_decl->name, EnumInfo{ enum_decl->name, enum_decl->location, {}, {} });
+    }
+
+    for (const auto& enum_decl : program.enums) {
+        auto& enum_info = enums_.at(enum_decl->name);
         for (const auto& member : enum_decl->members) {
             if (enum_info.member_index.contains(member.name)) {
                 throw SemaError(std::format("duplicate member '{}' in enum '{}'", member.name, enum_decl->name), member.location);
@@ -48,7 +55,6 @@ void SemanticAnalyzer::collect_enum_declarations(const Program& program) {
             enum_info.member_index.emplace(member.name, enum_info.members.size());
             enum_info.members.push_back(member.name);
         }
-        enums_.emplace(enum_decl->name, std::move(enum_info));
     }
 }
 
@@ -61,18 +67,22 @@ void SemanticAnalyzer::collect_function_signatures(const Program& program) {
         if (is_keyword(func->name)) {
             throw SemaError(std::format("function name '{}' cannot be a keyword", func->name), func->location);
         }
+        functions_.emplace(func->name, FunctionSignature{ func->name, {}, Type{ TypeKind::Void }, func->location });
+    }
+
+    for (const auto& func : program.functions) {
+        auto& signature = functions_.at(func->name);
         Type return_type = resolve_type(func->return_type, func->location);
         func->resolved_return_type = return_type;
-        std::vector<Type> param_types;
         for (const auto& param : func->params) {
-            if (param.type.kind == TypeKind::Void) {
+            Type param_type = resolve_type(param.type, param.location);
+            if (param_type.kind == TypeKind::Void) {
                 throw SemaError("parameter cannot have void type", param.location);
             }
-            Type param_type = resolve_type(param.type, param.location);
             param.resolved_type = param_type;
-            param_types.push_back(param_type);
+            signature.param_types.push_back(param_type);
         }
-        functions_.emplace(func->name, FunctionSignature{func->name, param_types, return_type, func->location});
+        signature.return_type = return_type;
     }
 }
 

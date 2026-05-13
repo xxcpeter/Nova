@@ -389,3 +389,7 @@ add_sema_negative_test(duplicate_enum_member)
 add_sema_negative_test(unknown_enum_member)
 add_sema_negative_test(enum_type_mismatch)
 add_sema_negative_test(enum_member_on_unknown_enum)
+
+# step 13
+add_nova_tokenizer_tool_test(enum_decl)
+add_nova_parser_tool_test(enum_decl)

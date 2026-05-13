@@ -1,0 +1,8 @@
+Program
+  Enum name=TokenKind
+    Member name=KW_FN
+    Member name=IDENT
+    Member name=EOF
+  Function name=main return=void
+    Block
+      ReturnStmt

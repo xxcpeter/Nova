@@ -23,10 +23,14 @@ private:
     std::string c_type(const Type& type);
 
     void gen_program(const Program& program);
-    void gen_struct_decl(const StructDecl& struct_decl);
-    void gen_enum_decl(const EnumDecl& enum_decl);
-    void gen_vec_helpers(const Program& program);
-    void gen_function(const FunctionDecl& function);
+    void gen_enum_decls(const Program& program);
+    void gen_struct_forward_declarations(const Program& program);
+    void gen_vec_forward_declarations(const Program& program);
+    void gen_struct_definitions(const Program& program);
+    void gen_vec_struct_definitions(const Program& program);
+    void gen_vec_helper_functions(const Program& program);
+    void gen_function_prototype(const Program& program);
+    void gen_function_definition(const Program& program);
     void gen_block_contents(const BlockStmt& block);
     void gen_block_stmt(const BlockStmt& block);
     void gen_stmt(const Stmt& stmt);

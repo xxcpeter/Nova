@@ -1,0 +1,9 @@
+enum TokenKind {
+    KW_FN;
+    IDENT;
+    EOF;
+}
+
+fn main() : void {
+    return;
+}
