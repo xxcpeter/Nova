@@ -1,0 +1,1 @@
+CheckerError: duplicate field 'x' in struct 'Point'

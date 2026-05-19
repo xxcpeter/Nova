@@ -1,0 +1,14 @@
+enum ParseNodeKind {
+    Program;
+    FunctionDecl;
+}
+
+struct ParseNode {
+    kind: ParseNodeKind;
+    name: str;
+    children: vec<ParseNode>;
+}
+
+fn main() : void {
+    return;
+}

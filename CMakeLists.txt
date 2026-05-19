@@ -94,6 +94,7 @@ enable_testing()
 set(TEXT_TEST_DRIVER ${CMAKE_CURRENT_SOURCE_DIR}/cmake/RunTextCompareTest.cmake)
 set(CODEGEN_TEST_DRIVER ${CMAKE_CURRENT_SOURCE_DIR}/cmake/RunCodegenTest.cmake)
 set(NOVA_TOOL_TEST_DRIVER ${CMAKE_CURRENT_SOURCE_DIR}/cmake/RunNovaToolTest.cmake)
+set(NOVA_TOOL_NEGATIVE_TEST_DRIVER ${CMAKE_CURRENT_SOURCE_DIR}/cmake/RunNovaToolNegativeTest.cmake)
 
 function(add_lexer_positive_test name)
     add_test(
@@ -237,6 +238,39 @@ function(add_nova_parser_tool_test name)
             -P ${NOVA_TOOL_TEST_DRIVER}
     )
     set_tests_properties(nova_tool_parser_${name} PROPERTIES LABELS "nova_tool;parser")
+endfunction()
+
+function(add_nova_checker_positive_test name)
+    add_test(
+        NAME nova_tool_checker_positive_${name}
+        COMMAND ${CMAKE_COMMAND}
+            -DNOVA_COMPILE=$<TARGET_FILE:nova_compile>
+            -DTOOL_SOURCE=${CMAKE_CURRENT_SOURCE_DIR}/tools/nova_checker.nv
+            -DINPUT=${CMAKE_CURRENT_SOURCE_DIR}/tests/tools/checker/positive/${name}.nv
+            -DEXPECT=${CMAKE_CURRENT_SOURCE_DIR}/tests/tools/checker/positive/${name}.out
+            -DRUNTIME_DIR=${CMAKE_CURRENT_SOURCE_DIR}/runtime
+            -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/nova_tool_tests/checker_positive_${name}
+            -DCC=cc
+            -P ${NOVA_TOOL_TEST_DRIVER}
+    )
+    set_tests_properties(nova_tool_checker_positive_${name} PROPERTIES LABELS "nova_tool;checker;positive")
+endfunction()
+
+function(add_nova_checker_negative_test name)
+    add_test(
+        NAME nova_tool_checker_negative_${name}
+        COMMAND ${CMAKE_COMMAND}
+            -DNOVA_COMPILE=$<TARGET_FILE:nova_compile>
+            -DTOOL_SOURCE=${CMAKE_CURRENT_SOURCE_DIR}/tools/nova_checker.nv
+            -DINPUT=${CMAKE_CURRENT_SOURCE_DIR}/tests/tools/checker/negative/${name}.nv
+            -DEXPECT=${CMAKE_CURRENT_SOURCE_DIR}/tests/tools/checker/negative/${name}.err
+            -DRUNTIME_DIR=${CMAKE_CURRENT_SOURCE_DIR}/runtime
+            -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/nova_tool_tests/checker_negative_${name}
+            -DSTRIP_RUNTIME_PREFIX=ON
+            -DCC=cc
+            -P ${NOVA_TOOL_NEGATIVE_TEST_DRIVER}
+    )
+    set_tests_properties(nova_tool_checker_negative_${name} PROPERTIES LABELS "nova_tool;checker;negative")
 endfunction()
 
 
@@ -393,3 +427,23 @@ add_sema_negative_test(enum_member_on_unknown_enum)
 # step 13
 add_nova_tokenizer_tool_test(enum_decl)
 add_nova_parser_tool_test(enum_decl)
+
+# step 14
+add_nova_checker_positive_test(minimal_function)
+add_nova_checker_positive_test(structs_enums_functions)
+add_nova_checker_positive_test(recursive_parse_node_shape)
+add_nova_checker_positive_test(local_shadow_nested_block)
+
+add_nova_checker_negative_test(duplicate_function)
+add_nova_checker_negative_test(duplicate_struct_field)
+add_nova_checker_negative_test(duplicate_enum_member)
+add_nova_checker_negative_test(unknown_field_type)
+add_nova_checker_negative_test(void_field_type)
+add_nova_checker_negative_test(direct_self_field)
+add_nova_checker_negative_test(missing_main)
+add_nova_checker_negative_test(invalid_main_return)
+add_nova_checker_negative_test(duplicate_param)
+add_nova_checker_negative_test(void_param)
+add_nova_checker_negative_test(unknown_let_type)
+add_nova_checker_negative_test(void_let_type)
+add_nova_checker_negative_test(duplicate_let_same_block)

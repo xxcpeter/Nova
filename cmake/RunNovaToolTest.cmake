@@ -1,3 +1,15 @@
+if(NOT EXISTS "${TOOL_SOURCE}")
+    message(FATAL_ERROR "TOOL_SOURCE does not exist: ${TOOL_SOURCE}")
+endif()
+
+if(NOT EXISTS "${INPUT}")
+    message(FATAL_ERROR "INPUT does not exist: ${INPUT}")
+endif()
+
+if(NOT EXISTS "${EXPECT}")
+    message(FATAL_ERROR "EXPECT does not exist: ${EXPECT}")
+endif()
+
 if(NOT DEFINED NOVA_COMPILE OR
    NOT DEFINED TOOL_SOURCE OR
    NOT DEFINED INPUT OR
@@ -18,7 +30,13 @@ get_filename_component(input_name "${INPUT}" NAME_WE)
 
 set(generated_c "${WORK_DIR}/${tool_name}.c")
 set(tool_exe "${WORK_DIR}/${tool_name}_exe")
-set(actual_output "${WORK_DIR}/${input_name}.tok")
+
+get_filename_component(expect_ext "${EXPECT}" EXT)
+if(expect_ext STREQUAL "")
+    set(expect_ext ".out")
+endif()
+
+set(actual_output "${WORK_DIR}/${input_name}${expect_ext}")
 
 # 1. Compile Nova tool source to C.
 execute_process(

@@ -1,0 +1,7 @@
+struct Box {
+    value: Missing;
+}
+
+fn main() : void {
+    return;
+}

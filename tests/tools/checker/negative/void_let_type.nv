@@ -1,0 +1,4 @@
+fn main() : void {
+    let x : void = 1;
+    return;
+}

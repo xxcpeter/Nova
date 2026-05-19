@@ -1,0 +1,7 @@
+struct Bad {
+    value: void;
+}
+
+fn main() : void {
+    return;
+}
