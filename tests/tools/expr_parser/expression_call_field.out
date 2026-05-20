@@ -1,0 +1,10 @@
+Program
+  Function name=main return=void
+    Block
+      ExprStmt
+        CallExpr name=print_str
+          FieldAccessExpr name=lexeme
+            CallExpr name=vec_get
+              IdentifierExpr name=tokens
+              IntLiteralExpr value=0
+      ReturnStmt

@@ -273,6 +273,47 @@ function(add_nova_checker_negative_test name)
     set_tests_properties(nova_tool_checker_negative_${name} PROPERTIES LABELS "nova_tool;checker;negative")
 endfunction()
 
+function(add_nova_expr_parser_tool_test name)
+    add_test(
+        NAME nova_tool_expr_parser_${name}
+        COMMAND ${CMAKE_COMMAND}
+            -DNOVA_COMPILE=$<TARGET_FILE:nova_compile>
+            -DTOOL_SOURCE=${CMAKE_CURRENT_SOURCE_DIR}/tools/nova_expr_parser.nv
+            -DINPUT=${CMAKE_CURRENT_SOURCE_DIR}/tests/tools/expr_parser/${name}.nv
+            -DEXPECT=${CMAKE_CURRENT_SOURCE_DIR}/tests/tools/expr_parser/${name}.out
+            -DRUNTIME_DIR=${CMAKE_CURRENT_SOURCE_DIR}/runtime
+            -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/nova_tool_tests/expr_parser_${name}
+            -DCC=cc
+            -P ${NOVA_TOOL_TEST_DRIVER}
+    )
+
+    set_tests_properties(
+        nova_tool_expr_parser_${name}
+        PROPERTIES LABELS "nova_tool;expr_parser"
+    )
+endfunction()
+
+function(add_nova_expr_parser_negative_test name)
+    add_test(
+        NAME nova_tool_expr_parser_negative_${name}
+        COMMAND ${CMAKE_COMMAND}
+            -DNOVA_COMPILE=$<TARGET_FILE:nova_compile>
+            -DTOOL_SOURCE=${CMAKE_CURRENT_SOURCE_DIR}/tools/nova_expr_parser.nv
+            -DINPUT=${CMAKE_CURRENT_SOURCE_DIR}/tests/tools/expr_parser/negative/${name}.nv
+            -DEXPECT=${CMAKE_CURRENT_SOURCE_DIR}/tests/tools/expr_parser/negative/${name}.err
+            -DRUNTIME_DIR=${CMAKE_CURRENT_SOURCE_DIR}/runtime
+            -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/nova_tool_tests/expr_parser_negative_${name}
+            -DSTRIP_RUNTIME_PREFIX=ON
+            -DCC=cc
+            -P ${NOVA_TOOL_NEGATIVE_TEST_DRIVER}
+    )
+
+    set_tests_properties(
+        nova_tool_expr_parser_negative_${name}
+        PROPERTIES LABELS "nova_tool;expr_parser;negative"
+    )
+endfunction()
+
 
 # step 2
 add_lexer_positive_test(single_tokens)
@@ -447,3 +488,17 @@ add_nova_checker_negative_test(void_param)
 add_nova_checker_negative_test(unknown_let_type)
 add_nova_checker_negative_test(void_let_type)
 add_nova_checker_negative_test(duplicate_let_same_block)
+
+# step 15
+add_nova_expr_parser_tool_test(expression_precedence)
+add_nova_expr_parser_tool_test(expression_call_field)
+add_nova_expr_parser_tool_test(expression_struct_literal)
+add_nova_expr_parser_tool_test(expression_assignment)
+add_nova_expr_parser_tool_test(condition_expr)
+add_nova_expr_parser_tool_test(expression_return_value)
+add_nova_expr_parser_tool_test(expression_unary)
+
+add_nova_expr_parser_negative_test(missing_expr_after_assign)
+add_nova_expr_parser_negative_test(missing_rparen_in_call)
+add_nova_expr_parser_negative_test(malformed_struct_literal)
+add_nova_expr_parser_negative_test(incomplete_binary_expr)

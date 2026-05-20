@@ -1,0 +1,13 @@
+Program
+  Struct name=Point
+    Field name=x type=int
+    Field name=y type=int
+  Function name=main return=void
+    Block
+      LetStmt name=p type=Point
+        StructLiteralExpr name=Point
+          FieldInit name=x
+            IntLiteralExpr value=1
+          FieldInit name=y
+            IntLiteralExpr value=2
+      ReturnStmt

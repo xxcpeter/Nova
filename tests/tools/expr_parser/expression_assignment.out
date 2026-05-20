@@ -1,0 +1,10 @@
+Program
+  Function name=main return=void
+    Block
+      ExprStmt
+        AssignExpr
+          IdentifierExpr name=x
+          BinaryExpr op=+
+            IdentifierExpr name=x
+            IntLiteralExpr value=1
+      ReturnStmt

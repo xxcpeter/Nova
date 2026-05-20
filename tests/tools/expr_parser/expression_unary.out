@@ -1,0 +1,10 @@
+Program
+  Function name=main return=void
+    Block
+      LetStmt name=x type=int
+        UnaryExpr op=-
+          IntLiteralExpr value=1
+      LetStmt name=y type=bool
+        UnaryExpr op=!
+          IdentifierExpr name=flag
+      ReturnStmt

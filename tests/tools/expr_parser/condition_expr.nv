@@ -1,0 +1,9 @@
+fn main() : void {
+    if (x > 0) {
+        return;
+    }
+    while (x < 10) {
+        x = x + 1;
+    }
+    return;
+}

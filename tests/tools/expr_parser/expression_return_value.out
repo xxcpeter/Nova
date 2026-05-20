@@ -1,0 +1,6 @@
+Program
+  Function name=id return=int
+    Param name=x type=int
+    Block
+      ReturnStmt
+        IdentifierExpr name=x

@@ -1,0 +1,4 @@
+fn main() : void {
+    print_str(vec_get(tokens, 0).lexeme);
+    return;
+}
