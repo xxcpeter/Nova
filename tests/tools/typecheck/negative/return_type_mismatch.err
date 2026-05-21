@@ -1,0 +1,1 @@
+CheckerError at 2:12: type error in return statement: expected 'int', got 'str'

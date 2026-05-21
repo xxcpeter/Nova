@@ -1,0 +1,1 @@
+CheckerError at 3:9: type error in assignment expression: expected 'int', got 'str'

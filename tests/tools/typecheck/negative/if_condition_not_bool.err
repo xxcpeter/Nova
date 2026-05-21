@@ -1,0 +1,1 @@
+CheckerError at 2:9: type error in if condition: expected 'bool', got 'int'

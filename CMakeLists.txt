@@ -314,6 +314,39 @@ function(add_nova_expr_parser_negative_test name)
     )
 endfunction()
 
+function(add_nova_typecheck_positive_test name)
+    add_test(
+        NAME nova_tool_typecheck_positive_${name}
+        COMMAND ${CMAKE_COMMAND}
+            -DNOVA_COMPILE=$<TARGET_FILE:nova_compile>
+            -DTOOL_SOURCE=${CMAKE_CURRENT_SOURCE_DIR}/tools/nova_checker.nv
+            -DINPUT=${CMAKE_CURRENT_SOURCE_DIR}/tests/tools/typecheck/positive/${name}.nv
+            -DEXPECT=${CMAKE_CURRENT_SOURCE_DIR}/tests/tools/typecheck/positive/${name}.out
+            -DRUNTIME_DIR=${CMAKE_CURRENT_SOURCE_DIR}/runtime
+            -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/nova_tool_tests/typecheck_positive_${name}
+            -DCC=cc
+            -P ${NOVA_TOOL_TEST_DRIVER}
+    )
+    set_tests_properties(nova_tool_typecheck_positive_${name} PROPERTIES LABELS "nova_tool;typecheck;positive")
+endfunction()
+
+function(add_nova_typecheck_negative_test name)
+    add_test(
+        NAME nova_tool_typecheck_negative_${name}
+        COMMAND ${CMAKE_COMMAND}
+            -DNOVA_COMPILE=$<TARGET_FILE:nova_compile>
+            -DTOOL_SOURCE=${CMAKE_CURRENT_SOURCE_DIR}/tools/nova_checker.nv
+            -DINPUT=${CMAKE_CURRENT_SOURCE_DIR}/tests/tools/typecheck/negative/${name}.nv
+            -DEXPECT=${CMAKE_CURRENT_SOURCE_DIR}/tests/tools/typecheck/negative/${name}.err
+            -DRUNTIME_DIR=${CMAKE_CURRENT_SOURCE_DIR}/runtime
+            -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/nova_tool_tests/typecheck_negative_${name}
+            -DSTRIP_RUNTIME_PREFIX=ON
+            -DCC=cc
+            -P ${NOVA_TOOL_NEGATIVE_TEST_DRIVER}
+    )
+    set_tests_properties(nova_tool_typecheck_negative_${name} PROPERTIES LABELS "nova_tool;typecheck;negative")
+endfunction()
+
 
 # step 2
 add_lexer_positive_test(single_tokens)
@@ -502,3 +535,22 @@ add_nova_expr_parser_negative_test(missing_expr_after_assign)
 add_nova_expr_parser_negative_test(missing_rparen_in_call)
 add_nova_expr_parser_negative_test(malformed_struct_literal)
 add_nova_expr_parser_negative_test(incomplete_binary_expr)
+
+# step 16
+add_nova_typecheck_positive_test(let_return_int)
+add_nova_typecheck_positive_test(struct_literal_field_access)
+add_nova_typecheck_positive_test(enum_member_compare)
+add_nova_typecheck_positive_test(vec_basic)
+add_nova_typecheck_positive_test(while_assignment)
+
+add_nova_typecheck_negative_test(let_type_mismatch)
+add_nova_typecheck_negative_test(return_type_mismatch)
+add_nova_typecheck_negative_test(if_condition_not_bool)
+add_nova_typecheck_negative_test(undefined_variable)
+add_nova_typecheck_negative_test(call_arg_mismatch)
+add_nova_typecheck_negative_test(unknown_field)
+add_nova_typecheck_negative_test(unknown_enum_member)
+add_nova_typecheck_negative_test(vec_new_without_expected_type)
+add_nova_typecheck_negative_test(vec_push_type_mismatch)
+add_nova_typecheck_negative_test(assignment_type_mismatch)
+add_nova_typecheck_negative_test(non_assignable_target)

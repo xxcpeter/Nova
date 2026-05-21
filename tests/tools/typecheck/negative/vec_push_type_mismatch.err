@@ -1,0 +1,1 @@
+CheckerError at 3:18: type error in vec_push value: expected 'int', got 'str'

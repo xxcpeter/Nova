@@ -1,0 +1,8 @@
+fn f(x: int) : void {
+    return;
+}
+
+fn main() : void {
+    f("hello");
+    return;
+}

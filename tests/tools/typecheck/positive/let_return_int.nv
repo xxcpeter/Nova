@@ -1,0 +1,9 @@
+fn id(x: int) : int {
+    let y : int = x;
+    return y;
+}
+
+fn main() : void {
+    print_int(id(1));
+    return;
+}

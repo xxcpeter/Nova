@@ -1,0 +1,1 @@
+CheckerError at 6:7: type error in function call argument: expected 'int', got 'str'
