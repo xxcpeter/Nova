@@ -1,0 +1,20 @@
+enum Color {
+    Red;
+    Green;
+}
+
+struct Point {
+    x: int;
+    y: int;
+}
+
+fn main() : void {
+    let c : Color = Color.Red;
+    let p : Point = Point { x: 1, y: 2 };
+    let xs : vec<int> = vec_new();
+    vec_push(xs, p.x);
+    if (c == Color.Red) {
+        print_int(vec_get(xs, 0));
+    }
+    return;
+}

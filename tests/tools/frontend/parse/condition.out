@@ -1,0 +1,12 @@
+Program
+  Function name=main return=void
+    Block
+      IfStmt
+        Condition
+          BinaryExpr op=>
+            IdentifierExpr name=x
+            IntLiteralExpr value=0
+        Then
+          Block
+            ReturnStmt
+      ReturnStmt

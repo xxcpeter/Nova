@@ -1,0 +1,10 @@
+Program
+  Function name=main return=void
+    Block
+      LetStmt name=x type=int
+        BinaryExpr op=+
+          IntLiteralExpr value=1
+          BinaryExpr op=*
+            IntLiteralExpr value=2
+            IntLiteralExpr value=3
+      ReturnStmt

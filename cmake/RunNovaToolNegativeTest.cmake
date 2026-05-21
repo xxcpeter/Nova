@@ -158,8 +158,14 @@ endif()
 
 message(STATUS "Running negative Nova tool test: ${INPUT}")
 
+if(DEFINED TOOL_ARGS)
+    separate_arguments(extra_args UNIX_COMMAND "${TOOL_ARGS}")
+else()
+    set(extra_args "")
+endif()
+
 execute_process(
-    COMMAND "${tool_exe}" "${INPUT}" "${actual_output}"
+    COMMAND "${tool_exe}" ${extra_args} "${INPUT}" "${actual_output}"
     RESULT_VARIABLE run_rv
     OUTPUT_VARIABLE run_out
     ERROR_VARIABLE run_err

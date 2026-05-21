@@ -347,6 +347,58 @@ function(add_nova_typecheck_negative_test name)
     set_tests_properties(nova_tool_typecheck_negative_${name} PROPERTIES LABELS "nova_tool;typecheck;negative")
 endfunction()
 
+function(add_nova_frontend_test mode name ext)
+    add_test(
+        NAME nova_tool_frontend_${mode}_${name}
+        COMMAND ${CMAKE_COMMAND}
+            -DNOVA_COMPILE=$<TARGET_FILE:nova_compile>
+            -DTOOL_SOURCE=${CMAKE_CURRENT_SOURCE_DIR}/tools/nova_frontend.nv
+            -DINPUT=${CMAKE_CURRENT_SOURCE_DIR}/tests/tools/frontend/${mode}/${name}.nv
+            -DEXPECT=${CMAKE_CURRENT_SOURCE_DIR}/tests/tools/frontend/${mode}/${name}.${ext}
+            -DRUNTIME_DIR=${CMAKE_CURRENT_SOURCE_DIR}/runtime
+            -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/nova_tool_tests/frontend_${mode}_${name}
+            -DCC=cc
+            -DTOOL_ARGS=${mode}
+            -P ${NOVA_TOOL_TEST_DRIVER}
+    )
+    set_tests_properties(nova_tool_frontend_${mode}_${name} PROPERTIES LABELS "nova_tool;frontend;${mode}")
+endfunction()
+
+function(add_nova_frontend_negative_test mode name)
+    add_test(
+        NAME nova_tool_frontend_negative_${mode}_${name}
+        COMMAND ${CMAKE_COMMAND}
+            -DNOVA_COMPILE=$<TARGET_FILE:nova_compile>
+            -DTOOL_SOURCE=${CMAKE_CURRENT_SOURCE_DIR}/tools/nova_frontend.nv
+            -DINPUT=${CMAKE_CURRENT_SOURCE_DIR}/tests/tools/frontend/negative/${mode}/${name}.nv
+            -DEXPECT=${CMAKE_CURRENT_SOURCE_DIR}/tests/tools/frontend/negative/${mode}/${name}.err
+            -DRUNTIME_DIR=${CMAKE_CURRENT_SOURCE_DIR}/runtime
+            -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/nova_tool_tests/frontend_negative_${mode}_${name}
+            -DSTRIP_RUNTIME_PREFIX=ON
+            -DCC=cc
+            -DTOOL_ARGS=${mode}
+            -P ${NOVA_TOOL_NEGATIVE_TEST_DRIVER}
+    )
+    set_tests_properties(nova_tool_frontend_negative_${mode}_${name} PROPERTIES LABELS "nova_tool;frontend;negative;${mode}")
+endfunction()
+
+function(add_nova_frontend_smoke_check name source_path)
+    add_test(
+        NAME nova_tool_frontend_smoke_${name}
+        COMMAND ${CMAKE_COMMAND}
+            -DNOVA_COMPILE=$<TARGET_FILE:nova_compile>
+            -DTOOL_SOURCE=${CMAKE_CURRENT_SOURCE_DIR}/tools/nova_frontend.nv
+            -DINPUT=${CMAKE_CURRENT_SOURCE_DIR}/${source_path}
+            -DEXPECT=${CMAKE_CURRENT_SOURCE_DIR}/tests/tools/frontend/smoke/${name}.check
+            -DRUNTIME_DIR=${CMAKE_CURRENT_SOURCE_DIR}/runtime
+            -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/nova_tool_tests/frontend_smoke_${name}
+            -DCC=cc
+            -DTOOL_ARGS=check
+            -P ${NOVA_TOOL_TEST_DRIVER}
+    )
+    set_tests_properties(nova_tool_frontend_smoke_${name} PROPERTIES LABELS "nova_tool;frontend;smoke")
+endfunction()
+
 
 # step 2
 add_lexer_positive_test(single_tokens)
@@ -554,3 +606,21 @@ add_nova_typecheck_negative_test(vec_new_without_expected_type)
 add_nova_typecheck_negative_test(vec_push_type_mismatch)
 add_nova_typecheck_negative_test(assignment_type_mismatch)
 add_nova_typecheck_negative_test(non_assignable_target)
+
+# step 17
+add_nova_frontend_test(tokens basic tok)
+add_nova_frontend_test(tokens enum_expr tok)
+
+add_nova_frontend_test(parse expression out)
+add_nova_frontend_test(parse condition out)
+
+add_nova_frontend_test(check let_return_int check)
+add_nova_frontend_test(check struct_enum_vec check)
+
+add_nova_frontend_negative_test(check type_mismatch)
+add_nova_frontend_negative_test(check undefined_variable)
+add_nova_frontend_negative_test(parse missing_expr)
+
+add_nova_frontend_smoke_check(nova_tokenizer tools/nova_tokenizer.nv)
+add_nova_frontend_smoke_check(nova_expr_parser tools/nova_expr_parser.nv)
+add_nova_frontend_smoke_check(nova_checker tools/nova_checker.nv)

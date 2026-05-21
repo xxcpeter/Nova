@@ -2125,19 +2125,40 @@ fn check_program(tree: ParseNode) : str {
 
 
 fn main() : void {
-    if (arg_count() != 3) {
-        print_str("Usage: nova_checker <input.nv> <output.check>");
+    if (arg_count() != 4) {
+        print_str("Usage: nova_frontend <tokens|parse|check> <input.nv> <output>");
         return;
     }
 
-    let input_path : str = arg_get(1);
-    let output_path : str = arg_get(2);
+    let mode : str = arg_get(1);
+    let input_path : str = arg_get(2);
+    let output_path : str = arg_get(3);
 
     let source : str = read_file(input_path);
-    let tokens : vec<Token> = tokenize(source);
-    let tree : ParseNode = parse_program_tree(tokens);
-    let result : str = check_program(tree);
 
-    write_file(output_path, result);
+    if (str_eq(mode, "tokens")) {
+        let tokens : vec<Token> = tokenize(source);
+        let output : str = dump_tokens(tokens);
+        write_file(output_path, output);
+        return;
+    }
+
+    if (str_eq(mode, "parse")) {
+        let tokens : vec<Token> = tokenize(source);
+        let tree : ParseNode = parse_program_tree(tokens);
+        let output : str = dump_parse_tree(tree);
+        write_file(output_path, output);
+        return;
+    }
+
+    if (str_eq(mode, "check")) {
+        let tokens : vec<Token> = tokenize(source);
+        let tree : ParseNode = parse_program_tree(tokens);
+        let output : str = check_program(tree);
+        write_file(output_path, output);
+        return;
+    }
+
+    nova_runtime_error(str_concat("unknown frontend mode '", str_concat(mode, "'")));
     return;
 }
