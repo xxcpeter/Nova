@@ -1,0 +1,3 @@
+fn make_str() : str {
+    return "hello";
+}

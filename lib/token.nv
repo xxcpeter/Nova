@@ -1,0 +1,151 @@
+enum TokenKind {
+    KW_FN;
+    KW_LET;
+    KW_IF;
+    KW_ELSE;
+    KW_WHILE;
+    KW_RETURN;
+    KW_STRUCT;
+    KW_ENUM;
+    KW_VEC;
+    KW_INT;
+    KW_BOOL;
+    KW_STR;
+    KW_VOID;
+    KW_TRUE;
+    KW_FALSE;
+
+    IDENT;
+    INT_LITERAL;
+    STR_LITERAL;
+
+    LPAREN;
+    RPAREN;
+    LBRACE;
+    RBRACE;
+    COMMA;
+    SEMIC;
+    COLON;
+    DOT;
+
+    ASSIGN;
+    PLUS;
+    MINUS;
+    STAR;
+    SLASH;
+    PERCENT;
+
+    LT;
+    GT;
+    LE;
+    GE;
+    EQ_EQ;
+    BANG_EQ;
+    AND_AND;
+    OR_OR;
+    BANG;
+
+    EndOfFile;
+    INVALID;
+}
+
+struct Token {
+    kind: TokenKind;
+    lexeme: str;
+    line: int;
+    column: int;
+}
+
+fn make_token(kind: TokenKind, lexeme: str, line: int, column: int) : Token {
+    return Token{ kind : kind , lexeme : lexeme , line : line , column : column };
+}
+
+fn token_kind_name(kind: TokenKind) : str {
+    if (kind == TokenKind.KW_FN) {
+        return "KW_FN";
+    } else if (kind == TokenKind.KW_LET) {
+        return "KW_LET";
+    } else if (kind == TokenKind.KW_IF) {
+        return "KW_IF";
+    } else if (kind == TokenKind.KW_ELSE) {
+        return "KW_ELSE";
+    } else if (kind == TokenKind.KW_WHILE) {
+        return "KW_WHILE";
+    } else if (kind == TokenKind.KW_RETURN) {
+        return "KW_RETURN";
+    } else if (kind == TokenKind.KW_STRUCT) {
+        return "KW_STRUCT";
+    } else if (kind == TokenKind.KW_ENUM) {
+        return "KW_ENUM";
+    } else if (kind == TokenKind.KW_VEC) {
+        return "KW_VEC";
+    } else if (kind == TokenKind.KW_INT) {
+        return "KW_INT";
+    } else if (kind == TokenKind.KW_BOOL) {
+        return "KW_BOOL";
+    } else if (kind == TokenKind.KW_STR) {
+        return "KW_STR";
+    } else if (kind == TokenKind.KW_VOID) {
+        return "KW_VOID";
+    } else if (kind == TokenKind.KW_TRUE) {
+        return "KW_TRUE";
+    } else if (kind == TokenKind.KW_FALSE) {
+        return "KW_FALSE";
+    } else if (kind == TokenKind.IDENT) {
+        return "IDENT";
+    } else if (kind == TokenKind.INT_LITERAL) {
+        return "INT_LITERAL";
+    } else if (kind == TokenKind.STR_LITERAL) {
+        return "STR_LITERAL";
+    } else if (kind == TokenKind.LPAREN) {
+        return "LPAREN";
+    } else if (kind == TokenKind.RPAREN) {
+        return "RPAREN";
+    } else if (kind == TokenKind.LBRACE) {
+        return "LBRACE";
+    } else if (kind == TokenKind.RBRACE) {
+        return "RBRACE";
+    } else if (kind == TokenKind.COMMA) {
+        return "COMMA";
+    } else if (kind == TokenKind.SEMIC) {
+        return "SEMIC";
+    } else if (kind == TokenKind.COLON) {
+        return "COLON";
+    } else if (kind == TokenKind.DOT) {
+        return "DOT";
+    } else if (kind == TokenKind.ASSIGN) {
+        return "ASSIGN";
+    } else if (kind == TokenKind.PLUS) {
+        return "PLUS";
+    } else if (kind == TokenKind.MINUS) {
+        return "MINUS";
+    } else if (kind == TokenKind.STAR) {
+        return "STAR";
+    } else if (kind == TokenKind.SLASH) {
+        return "SLASH";
+    } else if (kind == TokenKind.PERCENT) {
+        return "PERCENT";
+    } else if (kind == TokenKind.LT) {
+        return "LT";
+    } else if (kind == TokenKind.GT) {
+        return "GT";
+    } else if (kind == TokenKind.LE) {
+        return "LE";
+    } else if (kind == TokenKind.GE) {
+        return "GE";
+    } else if (kind == TokenKind.EQ_EQ) {
+        return "EQ_EQ";
+    } else if (kind == TokenKind.BANG_EQ) {
+        return "BANG_EQ";
+    } else if (kind == TokenKind.AND_AND) {
+        return "AND_AND";
+    } else if (kind == TokenKind.OR_OR) {
+        return "OR_OR";
+    } else if (kind == TokenKind.BANG) {
+        return "BANG";
+    } else if (kind == TokenKind.EndOfFile) {
+        return "EndOfFile";
+    } else {
+        return "UNKNOWN";
+    }
+}

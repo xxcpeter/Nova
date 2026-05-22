@@ -1,1 +1,1 @@
-CheckerError: duplicate local variable 'x'
+CheckerError at 3:5: duplicate local variable 'x' in the same scope

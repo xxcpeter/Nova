@@ -1,0 +1,170 @@
+import "diagnostics.nv";
+
+
+fn import_is_whitespace(c: int) : bool {
+    return c == 32 || c == 9 || c == 10 || c == 13;
+}
+
+fn import_is_ident_continue(c: int) : bool {
+    return (c >= 65 && c <= 90) ||
+           (c >= 97 && c <= 122) ||
+           (c >= 48 && c <= 57) ||
+           c == 95;
+}
+
+fn import_vec_str_contains(xs: vec<str>, value: str) : bool {
+    let i : int = 0;
+    while (i < vec_len(xs)) {
+        if (str_eq(vec_get(xs, i), value)) {
+            return true;
+        }
+        i = i + 1;
+    }
+    return false;
+}
+
+fn path_dirname(path: str) : str {
+    let last_slash : int = -1;
+    let i : int = 0;
+    while (i < str_len(path)) {
+        if (str_get(path, i) == 47) {
+            last_slash = i;
+        }
+        i = i + 1;
+    }
+
+    if (last_slash < 0) {
+        return "";
+    }
+    if (last_slash == 0) {
+        return "/";
+    }
+    return str_slice(path, 0, last_slash);
+}
+
+
+fn path_join(base: str, child: str) : str {
+    if (str_len(child) > 0 && str_get(child, 0) == 47) {
+        return child;
+    }
+    if (str_eq(base, "")) {
+        return child;
+    }
+    if (str_get(base, str_len(base) - 1) == 47) {
+        return str_concat(base, child);
+    }
+    return str_concat(str_concat(base, "/"), child);
+}
+
+fn parse_import_line(line: str) : str {
+    let i : int = 0;
+    while (i < str_len(line) && import_is_whitespace(str_get(line, i))) {
+        i = i + 1;
+    }
+
+    if (i + 6 > str_len(line) || !str_eq(str_slice(line, i, i + 6), "import")) {
+        return "";
+    }
+
+    i = i + 6;
+    if (i < str_len(line) && import_is_ident_continue(str_get(line, i))) {
+        return "";
+    }
+
+    while (i < str_len(line) && import_is_whitespace(str_get(line, i))) {
+        i = i + 1;
+    }
+    if (i >= str_len(line) || str_get(line, i) != 34) {
+        import_error("malformed import directive");
+    }
+
+    i = i + 1;
+    let start : int = i;
+    while (i < str_len(line) && str_get(line, i) != 34) {
+        i = i + 1;
+    }
+    if (i >= str_len(line)) {
+        import_error("malformed import directive");
+    }
+
+    let import_path : str = str_slice(line, start, i);
+    i = i + 1;
+    while (i < str_len(line) && import_is_whitespace(str_get(line, i))) {
+        i = i + 1;
+    }
+    if (i >= str_len(line) || str_get(line, i) != 59) {
+        import_error("malformed import directive");
+    }
+
+    i = i + 1;
+    while (i < str_len(line) && import_is_whitespace(str_get(line, i))) {
+        i = i + 1;
+    }
+    if (i != str_len(line)) {
+        import_error("malformed import directive");
+    }
+    return import_path;
+}
+
+fn vec_str_copy_append(xs: vec<str>, value: str) : vec<str> {
+    let out : vec<str> = vec_new();
+    let i : int = 0;
+    while (i < vec_len(xs)) {
+        vec_push(out, vec_get(xs, i));
+        i = i + 1;
+    }
+    vec_push(out, value);
+    return out;
+}
+
+fn expand_file(path: str, display_path: str, visited: vec<str>, stack: vec<str>) : str {
+    if (import_vec_str_contains(stack, path)) {
+        import_error(str_concat("cyclic import involving '", str_concat(display_path, "'")));
+    }
+    if (import_vec_str_contains(visited, path)) {
+        return "";
+    }
+
+    vec_push(visited, path);
+    let active_stack : vec<str> = vec_str_copy_append(stack, path);
+
+    let source : str = read_file(path);
+    let out : int = buf_new();
+    let line_start : int = 0;
+    let i : int = 0;
+    while (i < str_len(source)) {
+        if (str_get(source, i) == 10) {
+            let line : str = str_slice(source, line_start, i);
+            let import_path : str = parse_import_line(line);
+            if (!str_eq(import_path, "")) {
+                let resolved : str = path_join(path_dirname(path), import_path);
+                buf_push_str(out, expand_file(resolved, import_path, visited, active_stack));
+                buf_push_str(out, "\n");
+            } else {
+                buf_push_str(out, line);
+                buf_push_str(out, "\n");
+            }
+            line_start = i + 1;
+        }
+        i = i + 1;
+    }
+    if (line_start < str_len(source)) {
+        let line : str = str_slice(source, line_start, str_len(source));
+        let import_path : str = parse_import_line(line);
+        if (!str_eq(import_path, "")) {
+            let resolved : str = path_join(path_dirname(path), import_path);
+            buf_push_str(out, expand_file(resolved, import_path, visited, active_stack));
+            buf_push_str(out, "\n");
+        } else {
+            buf_push_str(out, line);
+            buf_push_str(out, "\n");
+        }
+    }
+    return buf_to_str(out);
+}
+
+fn load_source_with_imports(path: str) : str {
+    let visited : vec<str> = vec_new();
+    let stack : vec<str> = vec_new();
+    return expand_file(path, path, visited, stack);
+}

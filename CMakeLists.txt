@@ -8,6 +8,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 add_executable(nova_lex
+    src/source_loader.cpp
     src/token.cpp
     src/lexer.cpp
     src/nova_lex.cpp
@@ -27,6 +28,7 @@ target_compile_options(nova_lex
 
 
 add_executable(nova_parse
+    src/source_loader.cpp
     src/token.cpp
     src/lexer.cpp
     src/parser.cpp
@@ -47,6 +49,7 @@ target_compile_options(nova_parse
 
 
 add_executable(nova_sema
+    src/source_loader.cpp
     src/token.cpp
     src/lexer.cpp
     src/parser.cpp
@@ -68,6 +71,7 @@ target_compile_options(nova_sema
 
 
 add_executable(nova_compile
+    src/source_loader.cpp
     src/token.cpp
     src/lexer.cpp
     src/parser.cpp
@@ -390,6 +394,7 @@ function(add_nova_frontend_smoke_check name source_path)
             -DTOOL_SOURCE=${CMAKE_CURRENT_SOURCE_DIR}/tools/nova_frontend.nv
             -DINPUT=${CMAKE_CURRENT_SOURCE_DIR}/${source_path}
             -DEXPECT=${CMAKE_CURRENT_SOURCE_DIR}/tests/tools/frontend/smoke/${name}.check
+            -DEXPECT_PREFIX=ON
             -DRUNTIME_DIR=${CMAKE_CURRENT_SOURCE_DIR}/runtime
             -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/nova_tool_tests/frontend_smoke_${name}
             -DCC=cc
@@ -397,6 +402,51 @@ function(add_nova_frontend_smoke_check name source_path)
             -P ${NOVA_TOOL_TEST_DRIVER}
     )
     set_tests_properties(nova_tool_frontend_smoke_${name} PROPERTIES LABELS "nova_tool;frontend;smoke")
+endfunction()
+
+function(add_import_codegen_positive_test name)
+    add_test(
+        NAME import_codegen_positive_${name}
+        COMMAND ${CMAKE_COMMAND}
+            -DNOVA_COMPILE=$<TARGET_FILE:nova_compile>
+            -DINPUT=${CMAKE_CURRENT_SOURCE_DIR}/tests/import/positive/${name}/main.nv
+            -DEXPECT=${CMAKE_CURRENT_SOURCE_DIR}/tests/import/positive/${name}/main.out
+            -DRUNTIME_DIR=${CMAKE_CURRENT_SOURCE_DIR}/runtime
+            -DCC=cc
+            -P ${CODEGEN_TEST_DRIVER}
+    )
+    set_tests_properties(import_codegen_positive_${name} PROPERTIES LABELS "import;codegen;positive")
+endfunction()
+
+function(add_import_negative_test name)
+    add_test(
+        NAME import_negative_${name}
+        COMMAND ${CMAKE_COMMAND}
+            -DTOOL=$<TARGET_FILE:nova_parse>
+            -DINPUT=${CMAKE_CURRENT_SOURCE_DIR}/tests/import/negative/${name}/main.nv
+            -DEXPECT=${CMAKE_CURRENT_SOURCE_DIR}/tests/import/negative/${name}/main.err
+            -DMODE=negative
+            -DLABEL=stderr
+            -P ${TEXT_TEST_DRIVER}
+    )
+    set_tests_properties(import_negative_${name} PROPERTIES LABELS "import;negative")
+endfunction()
+
+function(add_nova_frontend_import_check_test name)
+    add_test(
+        NAME nova_tool_frontend_import_check_${name}
+        COMMAND ${CMAKE_COMMAND}
+            -DNOVA_COMPILE=$<TARGET_FILE:nova_compile>
+            -DTOOL_SOURCE=${CMAKE_CURRENT_SOURCE_DIR}/tools/nova_frontend.nv
+            -DINPUT=${CMAKE_CURRENT_SOURCE_DIR}/tests/tools/frontend_import/check/${name}/main.nv
+            -DEXPECT=${CMAKE_CURRENT_SOURCE_DIR}/tests/tools/frontend_import/check/${name}/main.check
+            -DRUNTIME_DIR=${CMAKE_CURRENT_SOURCE_DIR}/runtime
+            -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/nova_tool_tests/frontend_import_check_${name}
+            -DCC=cc
+            -DTOOL_ARGS=check
+            -P ${NOVA_TOOL_TEST_DRIVER}
+    )
+    set_tests_properties(nova_tool_frontend_import_check_${name} PROPERTIES LABELS "nova_tool;frontend;import;check")
 endfunction()
 
 
@@ -624,3 +674,12 @@ add_nova_frontend_negative_test(parse missing_expr)
 add_nova_frontend_smoke_check(nova_tokenizer tools/nova_tokenizer.nv)
 add_nova_frontend_smoke_check(nova_expr_parser tools/nova_expr_parser.nv)
 add_nova_frontend_smoke_check(nova_checker tools/nova_checker.nv)
+
+# step 18
+add_import_codegen_positive_test(simple)
+add_import_codegen_positive_test(diamond)
+
+add_import_negative_test(missing)
+add_import_negative_test(cyclic)
+
+add_nova_frontend_import_check_test(simple)

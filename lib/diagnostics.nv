@@ -1,0 +1,39 @@
+fn lexer_error(message: str) : void {
+    nova_runtime_error(str_concat("lexer error: ", message));
+}
+
+fn parser_error(message: str) : void {
+    nova_runtime_error(str_concat("ParseError: ", message));
+}
+
+fn parser_error_at(line: int, column: int, message: str) : void {
+    nova_runtime_error(
+        str_concat(
+            str_concat(
+                "ParseError at ",
+                str_concat(str_concat(int_to_str(line), ":"), int_to_str(column))
+            ),
+            str_concat(": ", message)
+        )
+    );
+}
+
+fn checker_error(message: str) : void {
+    nova_runtime_error(str_concat("CheckerError: ", message));
+}
+
+fn checker_error_at(line: int, column: int, message: str) : void {
+    nova_runtime_error(
+        str_concat(
+            str_concat(
+                "CheckerError at ",
+                str_concat(str_concat(int_to_str(line), ":"), int_to_str(column))
+            ),
+            str_concat(": ", message)
+        )
+    );
+}
+
+fn import_error(message: str) : void {
+    nova_runtime_error(str_concat("ImportError: ", message));
+}

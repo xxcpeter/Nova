@@ -1,0 +1,6 @@
+import "lib.nv";
+
+fn main() : void {
+    let x : int = make_str();
+    return;
+}

@@ -1,0 +1,557 @@
+import "token.nv";
+import "parse_tree.nv";
+import "diagnostics.nv";
+
+
+fn token_kind(tokens: vec<Token>, pos: int) : str {
+    if (pos >= vec_len(tokens)) {
+        return "EndOfFile";
+    }
+    return token_kind_name(vec_get(tokens, pos).kind);
+}
+
+fn token_lexeme(tokens: vec<Token>, pos: int) : str {
+    if (pos >= vec_len(tokens)) {
+        return "";
+    }
+    return vec_get(tokens, pos).lexeme;
+}
+
+fn token_line(tokens: vec<Token>, pos: int) : int {
+    if (pos >= vec_len(tokens)) {
+        return -1;
+    }
+    return vec_get(tokens, pos).line;
+}
+
+fn token_column(tokens: vec<Token>, pos: int) : int {
+    if (pos >= vec_len(tokens)) {
+        return -1;
+    }
+    return vec_get(tokens, pos).column;
+}
+
+fn check(tokens: vec<Token>, pos: int, kind: TokenKind) : bool {
+    return vec_get(tokens, pos).kind == kind;
+}
+
+fn expect(tokens: vec<Token>, pos: int, kind: TokenKind, message: str) : int {
+    if (!check(tokens, pos, kind)) {
+        parser_error_at(token_line(tokens, pos), token_column(tokens, pos), message);
+    }
+    return pos + 1;
+}
+
+fn emit_indent(out: int , indent: int) : void {
+    let i : int = 0;
+    while (i < indent) {
+        buf_push_str(out, "  ");
+        i = i + 1;
+    }
+}
+
+fn emit_line(out: int, indent: int, text: str) : void {
+    emit_indent(out, indent);
+    buf_push_str(out, text);
+    buf_push_str(out, "\n");
+}
+
+fn parse_expression(tokens: vec<Token>, pos: int) : ExprParseResult {
+    return parse_assignment(tokens, pos);
+}
+
+fn parse_assignment(tokens: vec<Token>, pos: int) : ExprParseResult {
+    let left_result : ExprParseResult = parse_logical_or(tokens, pos);
+    let left_node : ParseNode = left_result.node;
+    pos = left_result.next_pos;
+
+    if (check(tokens, pos, TokenKind.ASSIGN)) {
+        let assign_node : ParseNode = make_node(ParseNodeKind.AssignExpr, "", "", token_line(tokens, pos), token_column(tokens, pos));
+        pos = pos + 1;
+        let right_result : ExprParseResult = parse_assignment(tokens, pos);
+        let right_node : ParseNode = right_result.node;
+        pos = right_result.next_pos;
+
+        assign_node = add_child(assign_node, left_node);
+        assign_node = add_child(assign_node, right_node);
+        return ExprParseResult { node: assign_node, next_pos: pos };
+    } else {
+        return left_result;
+    }
+}
+
+fn parse_logical_or(tokens: vec<Token>, pos: int) : ExprParseResult {
+    let left_result : ExprParseResult = parse_logical_and(tokens, pos);
+    let left_node : ParseNode = left_result.node;
+    pos = left_result.next_pos;
+
+    while (check(tokens, pos, TokenKind.OR_OR)) {
+        let or_node : ParseNode = make_node(ParseNodeKind.BinaryExpr, "||", "", token_line(tokens, pos), token_column(tokens, pos));
+        pos = pos + 1;
+        let right_result : ExprParseResult = parse_logical_and(tokens, pos);
+        let right_node : ParseNode = right_result.node;
+        pos = right_result.next_pos;
+
+        or_node = add_child(or_node, left_node);
+        or_node = add_child(or_node, right_node);
+        left_node = or_node;
+    }
+    return ExprParseResult { node: left_node, next_pos: pos };
+}
+
+fn parse_logical_and(tokens: vec<Token>, pos: int) : ExprParseResult {
+    let left_result : ExprParseResult = parse_equality(tokens, pos);
+    let left_node : ParseNode = left_result.node;
+    pos = left_result.next_pos;
+
+    while (check(tokens, pos, TokenKind.AND_AND)) {
+        let and_node : ParseNode = make_node(ParseNodeKind.BinaryExpr, "&&", "", token_line(tokens, pos), token_column(tokens, pos));
+        pos = pos + 1;
+        let right_result : ExprParseResult = parse_equality(tokens, pos);
+        let right_node : ParseNode = right_result.node;
+        pos = right_result.next_pos;
+
+        and_node = add_child(and_node, left_node);
+        and_node = add_child(and_node, right_node);
+        left_node = and_node;
+    }
+    return ExprParseResult { node: left_node, next_pos: pos };
+}
+
+fn parse_equality(tokens: vec<Token>, pos: int) : ExprParseResult {
+    let left_result : ExprParseResult = parse_comparison(tokens, pos);
+    let left_node : ParseNode = left_result.node;
+    pos = left_result.next_pos;
+
+    while (check(tokens, pos, TokenKind.EQ_EQ) || check(tokens, pos, TokenKind.BANG_EQ)) {
+        let op : str = token_lexeme(tokens, pos);
+        let eq_node : ParseNode = make_node(ParseNodeKind.BinaryExpr, op, "", token_line(tokens, pos), token_column(tokens, pos));
+        pos = pos + 1;
+        let right_result : ExprParseResult = parse_comparison(tokens, pos);
+        let right_node : ParseNode = right_result.node;
+        pos = right_result.next_pos;
+
+        eq_node = add_child(eq_node, left_node);
+        eq_node = add_child(eq_node, right_node);
+        left_node = eq_node;
+    }
+    return ExprParseResult { node: left_node, next_pos: pos };
+}
+
+fn parse_comparison(tokens: vec<Token>, pos: int) : ExprParseResult {
+    let left_result : ExprParseResult = parse_term(tokens, pos);
+    let left_node : ParseNode = left_result.node;
+    pos = left_result.next_pos;
+
+    while (check(tokens, pos, TokenKind.LT) || check(tokens, pos, TokenKind.LE) || 
+           check(tokens, pos, TokenKind.GT) || check(tokens, pos, TokenKind.GE)) {
+        let op : str = token_lexeme(tokens, pos);
+        let comp_node : ParseNode = make_node(ParseNodeKind.BinaryExpr, op, "", token_line(tokens, pos), token_column(tokens, pos));
+        pos = pos + 1;
+        let right_result : ExprParseResult = parse_term(tokens, pos);
+        let right_node : ParseNode = right_result.node;
+        pos = right_result.next_pos;
+
+        comp_node = add_child(comp_node, left_node);
+        comp_node = add_child(comp_node, right_node);
+        left_node = comp_node;
+    }
+    return ExprParseResult { node: left_node, next_pos: pos };
+}
+
+fn parse_term(tokens: vec<Token>, pos: int) : ExprParseResult {
+    let left_result : ExprParseResult = parse_factor(tokens, pos);
+    let left_node : ParseNode = left_result.node;
+    pos = left_result.next_pos;
+
+    while (check(tokens, pos, TokenKind.PLUS) || check(tokens, pos, TokenKind.MINUS)) {
+        let op : str = token_lexeme(tokens, pos);
+        let term_node : ParseNode = make_node(ParseNodeKind.BinaryExpr, op, "", token_line(tokens, pos), token_column(tokens, pos));
+        pos = pos + 1;
+        let right_result : ExprParseResult = parse_factor(tokens, pos);
+        let right_node : ParseNode = right_result.node;
+        pos = right_result.next_pos;
+
+        term_node = add_child(term_node, left_node);
+        term_node = add_child(term_node, right_node);
+        left_node = term_node;
+    }
+    return ExprParseResult { node: left_node, next_pos: pos };
+}
+
+fn parse_factor(tokens: vec<Token>, pos: int) : ExprParseResult {
+    let left_result : ExprParseResult = parse_unary(tokens, pos);
+    let left_node : ParseNode = left_result.node;
+    pos = left_result.next_pos;
+
+    while (check(tokens, pos, TokenKind.STAR) || check(tokens, pos, TokenKind.SLASH) || check(tokens, pos, TokenKind.PERCENT)) {
+        let op : str = token_lexeme(tokens, pos);
+        let factor_node : ParseNode = make_node(ParseNodeKind.BinaryExpr, op, "", token_line(tokens, pos), token_column(tokens, pos));
+        pos = pos + 1;
+        let right_result : ExprParseResult = parse_unary(tokens, pos);
+        let right_node : ParseNode = right_result.node;
+        pos = right_result.next_pos;
+
+        factor_node = add_child(factor_node, left_node);
+        factor_node = add_child(factor_node, right_node);
+        left_node = factor_node;
+    }
+    return ExprParseResult { node: left_node, next_pos: pos };
+}
+
+fn parse_unary(tokens: vec<Token>, pos: int) : ExprParseResult {
+    if (check(tokens, pos, TokenKind.BANG) || check(tokens, pos, TokenKind.MINUS)) {
+        let op : str = token_lexeme(tokens, pos);
+        let unary_node : ParseNode = make_node(ParseNodeKind.UnaryExpr, op, "", token_line(tokens, pos), token_column(tokens, pos));
+        pos = pos + 1;
+        let operand_result : ExprParseResult = parse_unary(tokens, pos);
+        let operand_node : ParseNode = operand_result.node;
+        pos = operand_result.next_pos;
+
+        unary_node = add_child(unary_node, operand_node);
+        return ExprParseResult { node: unary_node, next_pos: pos };
+    } else {
+        return parse_postfix(tokens, pos);
+    }
+}
+
+fn parse_postfix(tokens: vec<Token>, pos: int) : ExprParseResult {
+    let primary_result : ExprParseResult = parse_primary(tokens, pos);
+    let node : ParseNode = primary_result.node;
+    let current_pos : int = primary_result.next_pos;
+
+    while (check(tokens, current_pos, TokenKind.LPAREN) || check(tokens, current_pos, TokenKind.DOT) || check(tokens, current_pos, TokenKind.LBRACE)) {
+        if (check(tokens, current_pos, TokenKind.LPAREN)) {
+            let call_node : ParseNode = make_node(ParseNodeKind.CallExpr, "", "", token_line(tokens, current_pos - 1), token_column(tokens, current_pos - 1));
+            call_node.name = token_lexeme(tokens, current_pos - 1);
+            current_pos = current_pos + 1;
+
+            if (!check(tokens, current_pos, TokenKind.RPAREN)) {
+                let parsing_args : bool = true;
+
+                while (parsing_args) {
+                    let arg_result : ExprParseResult = parse_expression(tokens, current_pos);
+                    call_node = add_child(call_node, arg_result.node);
+                    current_pos = arg_result.next_pos;
+
+                    if (check(tokens, current_pos, TokenKind.COMMA)) {
+                        current_pos = current_pos + 1;
+                    } else {
+                        parsing_args = false;
+                    }
+                }
+            }
+
+            current_pos = expect(tokens, current_pos, TokenKind.RPAREN, "expected ')' after function call arguments");
+            node = call_node;
+        } else if (check(tokens, current_pos, TokenKind.DOT)) {
+            let field_access_node : ParseNode = make_node(ParseNodeKind.FieldAccessExpr, "", "", token_line(tokens, current_pos + 1), token_column(tokens, current_pos + 1));
+            field_access_node = add_child(field_access_node, node);
+            current_pos = current_pos + 1;
+            pos = expect(tokens, current_pos, TokenKind.IDENT, "expected field name after '.'");
+            let field_name : str = token_lexeme(tokens, pos - 1);
+            field_access_node.name = field_name;
+            node = field_access_node;
+            current_pos = pos;
+        } else if (check(tokens, current_pos, TokenKind.LBRACE)) {
+            let struct_literal_node : ParseNode = make_node(ParseNodeKind.StructLiteralExpr, "", "", token_line(tokens, current_pos - 1), token_column(tokens, current_pos - 1));
+            struct_literal_node.name = token_lexeme(tokens, current_pos - 1);
+            current_pos = current_pos + 1;
+            while (!check(tokens, current_pos, TokenKind.RBRACE) && !check(tokens, current_pos, TokenKind.EndOfFile)) {
+                pos = expect(tokens, current_pos, TokenKind.IDENT, "expected struct literal field name");
+                let field_name : str = token_lexeme(tokens, pos - 1);
+                let field_line : int = token_line(tokens, current_pos);
+                let field_column : int = token_column(tokens, current_pos);
+                pos = expect(tokens, pos, TokenKind.COLON, "expected ':' after struct literal field name");
+                let value_result : ExprParseResult = parse_expression(tokens, pos);
+                let value_node : ParseNode = value_result.node;
+                pos = value_result.next_pos;
+
+                let field_init_node : ParseNode = make_node(ParseNodeKind.StructFieldInitExpr, field_name, "", field_line, field_column);
+                field_init_node = add_child(field_init_node, value_node);
+                struct_literal_node = add_child(struct_literal_node, field_init_node);
+
+                if (check(tokens, pos, TokenKind.COMMA)) {
+                    pos = pos + 1;
+                }
+                current_pos = pos;
+            }
+            current_pos = expect(tokens, current_pos, TokenKind.RBRACE, "expected '}' after struct literal fields");
+            node = struct_literal_node;
+        }
+    }
+    return ExprParseResult { node: node, next_pos: current_pos };
+}
+
+fn parse_primary(tokens: vec<Token>, pos: int) : ExprParseResult {
+    if (check(tokens, pos, TokenKind.INT_LITERAL)) {
+        let int_node : ParseNode = make_node(ParseNodeKind.IntLiteralExpr, "", token_lexeme(tokens, pos), token_line(tokens, pos), token_column(tokens, pos));
+        return ExprParseResult { node: int_node, next_pos: pos + 1 };
+    } else if (check(tokens, pos, TokenKind.STR_LITERAL)) {
+        let str_node : ParseNode = make_node(ParseNodeKind.StrLiteralExpr, "", token_lexeme(tokens, pos), token_line(tokens, pos), token_column(tokens, pos));
+        return ExprParseResult { node: str_node, next_pos: pos + 1 };
+    } else if (check(tokens, pos, TokenKind.KW_TRUE) || check(tokens, pos, TokenKind.KW_FALSE)) {
+        let bool_node : ParseNode = make_node(ParseNodeKind.BoolLiteralExpr, "", token_lexeme(tokens, pos), token_line(tokens, pos), token_column(tokens, pos));
+        return ExprParseResult { node: bool_node, next_pos: pos + 1 };
+    } else if (check(tokens, pos, TokenKind.IDENT)) {
+        let ident_node : ParseNode = make_node(ParseNodeKind.IdentifierExpr, token_lexeme(tokens, pos), "", token_line(tokens, pos), token_column(tokens, pos));
+        return ExprParseResult { node: ident_node, next_pos: pos + 1 };
+    } else if (check(tokens, pos, TokenKind.LPAREN)) {
+        let inner : ExprParseResult = parse_expression(tokens, pos + 1);
+        let next : int = expect(tokens, inner.next_pos, TokenKind.RPAREN, "expected ')' after expression");
+        return ExprParseResult { node: inner.node, next_pos: next };
+    } else {
+        parser_error_at(token_line(tokens, pos), token_column(tokens, pos), "expected expression");
+        let dummy_node : ParseNode = make_node(ParseNodeKind.IntLiteralExpr, "", "0", token_line(tokens, pos), token_column(tokens, pos));
+        return ExprParseResult { node: dummy_node, next_pos: pos + 1 }; // dummy return
+    }
+}
+
+fn parse_type_text(tokens: vec<Token>, pos: int) : TypeParseResult {
+    let type_text : str = "";
+    if (check(tokens, pos, TokenKind.KW_VEC)) {
+        pos = pos + 1;
+        pos = expect(tokens, pos, TokenKind.LT, "expected '<' after 'vec' in type");
+        if (check(tokens, pos, TokenKind.KW_INT) || check(tokens, pos, TokenKind.KW_STR) || 
+            check(tokens, pos, TokenKind.KW_BOOL) || check(tokens, pos, TokenKind.IDENT)) {
+            type_text = str_concat("vec<", str_concat(token_lexeme(tokens, pos), ">"));
+            pos = pos + 1;
+        } else {
+            parser_error_at(token_line(tokens, pos), token_column(tokens, pos), "expected vector element type");
+        }
+        pos = expect(tokens, pos, TokenKind.GT, "expected '>' after element type in vec type");
+    } else if (check(tokens, pos, TokenKind.KW_INT) || check(tokens, pos, TokenKind.KW_STR) || 
+                check(tokens, pos, TokenKind.KW_BOOL) || check(tokens, pos, TokenKind.IDENT) || 
+                check(tokens, pos, TokenKind.KW_VOID)) {
+        type_text = token_lexeme(tokens, pos);
+        pos = pos + 1;
+    } else {
+        parser_error_at(token_line(tokens, pos), token_column(tokens, pos), "expected type");
+    }
+    
+    return TypeParseResult { text: type_text, next_pos: pos };
+}
+
+fn parse_struct(tokens: vec<Token>, pos: int) : ParseResult {
+    let struct_decl : ParseNode = make_node(ParseNodeKind.StructDecl, "", "", token_line(tokens, pos), token_column(tokens, pos));
+    struct_decl.name = token_lexeme(tokens, pos + 1);
+    pos = pos + 2;
+
+    pos = expect(tokens, pos, TokenKind.LBRACE, "expected '{' after struct name");
+    while (!check(tokens, pos, TokenKind.RBRACE) && !check(tokens, pos, TokenKind.EndOfFile)) {
+        pos = expect(tokens, pos, TokenKind.IDENT, "expected field name in struct");
+        let field_name : str = token_lexeme(tokens, pos - 1);
+        pos = expect(tokens, pos, TokenKind.COLON, "expected ':' after field name in struct");
+        let r : TypeParseResult = parse_type_text(tokens, pos);
+        let field_decl : ParseNode = make_node(ParseNodeKind.FieldDecl, field_name, r.text, token_line(tokens, pos - 2), token_column(tokens, pos - 2));
+        pos = r.next_pos;
+        pos = expect(tokens, pos, TokenKind.SEMIC, "expected ';' after struct field declaration");
+        struct_decl = add_child(struct_decl, field_decl);
+    }
+    pos = expect(tokens, pos, TokenKind.RBRACE, "expected '}' after struct declaration");
+    
+    return ParseResult { node: struct_decl, next_pos: pos };
+}
+
+fn parse_enum(tokens: vec<Token>, pos: int) : ParseResult {
+    let enum_decl : ParseNode = make_node(ParseNodeKind.EnumDecl, "", "", token_line(tokens, pos), token_column(tokens, pos));
+    enum_decl.name = token_lexeme(tokens, pos + 1);
+    pos = pos + 2;
+
+    pos = expect(tokens, pos, TokenKind.LBRACE, "expected '{' after enum name");
+    while (!check(tokens, pos, TokenKind.RBRACE) && !check(tokens, pos, TokenKind.EndOfFile)) {
+        pos = expect(tokens, pos, TokenKind.IDENT, "expected member name in enum");
+        let member_name : str = token_lexeme(tokens, pos - 1);
+        pos = expect(tokens, pos, TokenKind.SEMIC, "expected ';' after enum member");
+        let member_decl : ParseNode = make_node(ParseNodeKind.EnumMember, member_name, "", token_line(tokens, pos - 2), token_column(tokens, pos - 2));
+        enum_decl = add_child(enum_decl, member_decl);
+    }
+    pos = expect(tokens, pos, TokenKind.RBRACE, "expected '}' after enum declaration");
+    
+    return ParseResult { node: enum_decl, next_pos: pos };
+}
+
+fn parse_function(tokens: vec<Token>, pos: int) : ParseResult {
+    let func_decl : ParseNode = make_node(ParseNodeKind.FunctionDecl, "", "", token_line(tokens, pos), token_column(tokens, pos));
+    func_decl.name = token_lexeme(tokens, pos + 1);
+    pos = pos + 2;
+    pos = expect(tokens, pos, TokenKind.LPAREN, "expected '(' after function name");
+    while (!check(tokens, pos, TokenKind.RPAREN)) {
+        pos = expect(tokens, pos, TokenKind.IDENT, "expected parameter name in function declaration");
+        let param_name : str = token_lexeme(tokens, pos - 1);
+        pos = expect(tokens, pos, TokenKind.COLON, "expected ':' after parameter name in function declaration");
+        let r : TypeParseResult = parse_type_text(tokens, pos);
+        pos = r.next_pos;
+        let param : ParseNode = make_node(ParseNodeKind.ParamDecl, param_name, r.text, token_line(tokens, pos - 2), token_column(tokens, pos - 2));
+        if (check(tokens, pos, TokenKind.COMMA)) {
+            pos = expect(tokens, pos, TokenKind.COMMA, "expected ',' between parameters in function declaration");
+        }
+        func_decl = add_child(func_decl, param);
+    }
+    pos = expect(tokens, pos, TokenKind.RPAREN, "expected ')' after parameters in function declaration");
+    pos = expect(tokens, pos, TokenKind.COLON, "expected ':' after parameter list in function declaration"); 
+    let tr : TypeParseResult = parse_type_text(tokens, pos);
+    func_decl.value = tr.text;
+    pos = tr.next_pos;
+
+    let r : ParseResult = parse_block(tokens, pos);
+    func_decl = add_child(func_decl, r.node);
+    pos = r.next_pos;
+    
+    return ParseResult { node: func_decl, next_pos: pos };
+}
+
+fn parse_block(tokens: vec<Token>, pos: int) : ParseResult {
+    pos = expect(tokens, pos, TokenKind.LBRACE, "expected '{' at start of block statement");
+    let block : ParseNode = make_node(ParseNodeKind.BlockStmt, "", "", token_line(tokens, pos - 1), token_column(tokens, pos - 1));
+    
+    while (!check(tokens, pos, TokenKind.RBRACE) && !check(tokens, pos, TokenKind.EndOfFile)) {
+        let r : ParseResult = parse_stmt(tokens, pos);
+        block = add_child(block, r.node);
+        pos = r.next_pos;
+    }
+    pos = expect(tokens, pos, TokenKind.RBRACE, "expected '}' at end of block statement");
+    
+    return ParseResult { node: block, next_pos: pos };
+}
+
+fn parse_stmt(tokens: vec<Token>, pos: int) : ParseResult {
+    if (check(tokens, pos, TokenKind.KW_LET)) {
+        return parse_let_stmt(tokens, pos);
+    } else if (check(tokens, pos, TokenKind.KW_RETURN)) {
+        return parse_return_stmt(tokens, pos);
+    } else if (check(tokens, pos, TokenKind.KW_IF)) {
+        return parse_if_stmt(tokens, pos);
+    } else if (check(tokens, pos, TokenKind.KW_WHILE)) {
+        return parse_while_stmt(tokens, pos);
+    } else if (check(tokens, pos, TokenKind.LBRACE)) {
+        return parse_block(tokens, pos);
+    } else {
+        return parse_expr_stmt(tokens, pos);
+    }
+}
+
+fn parse_let_stmt(tokens: vec<Token>, pos: int) : ParseResult {
+    let line : int = token_line(tokens, pos);
+    let column : int = token_column(tokens, pos);
+    pos = expect(tokens, pos, TokenKind.KW_LET, "expected 'let' keyword in variable declaration");
+    pos = expect(tokens, pos, TokenKind.IDENT, "expected variable name in variable declaration");
+    let var_name : str = token_lexeme(tokens, pos - 1);
+    pos = expect(tokens, pos, TokenKind.COLON, "expected ':' after variable name in variable declaration");
+    let r : TypeParseResult = parse_type_text(tokens, pos);
+    let var_type : str = r.text;
+    pos = r.next_pos;
+    let let_stmt : ParseNode = make_node(ParseNodeKind.LetStmt, var_name, var_type, line, column);
+    
+    pos = expect(tokens, pos, TokenKind.ASSIGN, "expected '=' after variable type");
+    let expr_result : ExprParseResult = parse_expression(tokens, pos);
+    let_stmt = add_child(let_stmt, expr_result.node);
+    pos = expr_result.next_pos;
+    pos = expect(tokens, pos, TokenKind.SEMIC, "expected ';' after variable declaration");
+
+    return ParseResult { node: let_stmt, next_pos: pos };
+}
+
+fn parse_return_stmt(tokens: vec<Token>, pos: int) : ParseResult {
+    pos = expect(tokens, pos, TokenKind.KW_RETURN, "expected 'return' keyword in return statement");
+    let return_stmt : ParseNode = make_node(ParseNodeKind.ReturnStmt, "", "", token_line(tokens, pos - 1), token_column(tokens, pos - 1));
+
+    if (!check(tokens, pos, TokenKind.SEMIC)) {
+        let r : ExprParseResult = parse_expression(tokens, pos);
+        return_stmt = add_child(return_stmt, r.node);
+        pos = r.next_pos;
+    }
+    pos = expect(tokens, pos, TokenKind.SEMIC, "expected ';' after return statement");
+    
+    return ParseResult { node: return_stmt, next_pos: pos };
+}
+
+fn parse_if_stmt(tokens: vec<Token>, pos: int) : ParseResult {
+    pos = expect(tokens, pos, TokenKind.KW_IF, "expected 'if' in if statement");
+    let if_stmt : ParseNode = make_node(ParseNodeKind.IfStmt, "", "", token_line(tokens, pos - 1), token_column(tokens, pos - 1));
+    
+    pos = expect(tokens, pos, TokenKind.LPAREN, "expected '(' after 'if'");
+    let cond : ExprParseResult = parse_expression(tokens, pos);
+    let condition_stmt : ParseNode = make_node(ParseNodeKind.Condition, "Condition", "", token_line(tokens, pos), token_column(tokens, pos));
+    condition_stmt = add_child(condition_stmt, cond.node);
+    if_stmt = add_child(if_stmt, condition_stmt);
+    pos = cond.next_pos;
+    pos = expect(tokens, pos, TokenKind.RPAREN, "expected ')' after if condition");
+    
+    let then_stmt : ParseNode = make_node(ParseNodeKind.ThenBranch, "", "", token_line(tokens, pos), token_column(tokens, pos));
+    let r : ParseResult = parse_stmt(tokens, pos);
+    then_stmt = add_child(then_stmt, r.node);
+    pos = r.next_pos;
+    if_stmt = add_child(if_stmt, then_stmt);
+
+    if (check(tokens, pos, TokenKind.KW_ELSE)) {
+        pos = expect(tokens, pos, TokenKind.KW_ELSE, "expected 'else' after if statement");
+        let else_stmt : ParseNode = make_node(ParseNodeKind.ElseBranch, "", "", token_line(tokens, pos - 1), token_column(tokens, pos - 1));
+        let r : ParseResult = parse_stmt(tokens, pos);
+        else_stmt = add_child(else_stmt, r.node);
+        pos = r.next_pos;
+        if_stmt = add_child(if_stmt, else_stmt);
+    }
+
+    return ParseResult { node: if_stmt, next_pos: pos };
+}
+
+fn parse_while_stmt(tokens: vec<Token>, pos: int) : ParseResult {
+    pos = expect(tokens, pos, TokenKind.KW_WHILE, "expected 'while' in while statement");
+    let while_stmt : ParseNode = make_node(ParseNodeKind.WhileStmt, "", "", token_line(tokens, pos - 1), token_column(tokens, pos - 1));
+    
+    pos = expect(tokens, pos, TokenKind.LPAREN, "expected '(' after 'while'");
+    let condition_stmt : ParseNode = make_node(ParseNodeKind.Condition, "Condition", "", token_line(tokens, pos), token_column(tokens, pos));
+    let cond : ExprParseResult = parse_expression(tokens, pos);
+    condition_stmt = add_child(condition_stmt, cond.node);
+    while_stmt = add_child(while_stmt, condition_stmt);
+    pos = cond.next_pos;
+    pos = expect(tokens, pos, TokenKind.RPAREN, "expected ')' after while condition");
+    
+    let r : ParseResult = parse_stmt(tokens, pos);
+    while_stmt = add_child(while_stmt, r.node);
+    pos = r.next_pos;
+    
+    return ParseResult { node: while_stmt, next_pos: pos };
+}
+
+fn parse_expr_stmt(tokens: vec<Token>, pos: int) : ParseResult {
+    let line : int = token_line(tokens, pos);
+    let column : int = token_column(tokens, pos);
+    let expr_result : ExprParseResult = parse_expression(tokens, pos);
+    let stmt : ParseNode = make_node(ParseNodeKind.ExprStmt, "", "", line, column);
+    stmt = add_child(stmt, expr_result.node);
+    pos = expr_result.next_pos;
+    pos = expect(tokens, pos, TokenKind.SEMIC, "expected ';' after expression statement");
+    
+    return ParseResult { node: stmt, next_pos: pos };
+}
+
+fn parse_program_tree(tokens: vec<Token>) : ParseNode {
+    let pos : int = 0;
+    let program : ParseNode = make_node(ParseNodeKind.Program, "", "", token_line(tokens, pos), token_column(tokens, pos));
+
+    while (!check(tokens, pos, TokenKind.EndOfFile)) {
+        if (check(tokens, pos, TokenKind.KW_STRUCT)) {
+            let r : ParseResult = parse_struct(tokens, pos);
+            program = add_child(program, r.node);
+            pos = r.next_pos;
+        } else if (check(tokens, pos, TokenKind.KW_ENUM)) {
+            let r : ParseResult = parse_enum(tokens, pos);
+            program = add_child(program, r.node);
+            pos = r.next_pos;
+        } else if (check(tokens, pos, TokenKind.KW_FN)) {
+            let r : ParseResult = parse_function(tokens, pos);
+            program = add_child(program, r.node);
+            pos = r.next_pos;
+        } else {
+            parser_error(str_concat("expected top-level declaration, got ", token_kind(tokens, pos)));
+        }
+    }
+    return program;
+}
+
+fn parse_program(tokens: vec<Token>) : str {
+    let tree : ParseNode = parse_program_tree(tokens);
+    return dump_parse_tree(tree);
+}

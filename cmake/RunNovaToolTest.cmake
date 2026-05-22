@@ -116,6 +116,22 @@ endif()
 file(READ "${actual_output}" actual)
 file(READ "${EXPECT}" expected)
 
+if(DEFINED EXPECT_PREFIX AND EXPECT_PREFIX)
+    string(LENGTH "${expected}" expected_len)
+    string(SUBSTRING "${actual}" 0 ${expected_len} actual_prefix)
+
+    if(NOT actual_prefix STREQUAL expected)
+        message(FATAL_ERROR
+            "output prefix mismatch\n"
+            "expected prefix:\n${expected}\n\n"
+            "actual output:\n${actual}"
+        )
+    endif()
+
+    message(STATUS "Output prefix matched")
+    return()
+endif()
+
 # Normalize line endings.
 string(REPLACE "\r\n" "\n" actual "${actual}")
 string(REPLACE "\r\n" "\n" expected "${expected}")

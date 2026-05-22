@@ -2,23 +2,13 @@
 #include "ast.h"
 #include "parser.h"
 #include "lexer.h"
+#include "source_loader.h"
 
 #include <fstream>
 #include <sstream>
 #include <iostream>
 #include <filesystem>
 #include <string>
-
-
-std::string read_file(const std::string& path) {
-    std::ifstream inFile(path);
-    if (!inFile) throw std::runtime_error("Invalid path");
-    std::stringstream buffer;
-    
-    buffer << inFile.rdbuf();
-    
-    return buffer.str();
-}
 
 
 int main(int argc, char* argv[]) {
@@ -28,13 +18,16 @@ int main(int argc, char* argv[]) {
     }
     std::string path = argv[1];
     std::string name = std::filesystem::path(path).filename().string();
-    std::string source = read_file(path);
-        
+    
     try {
+        std::string source = load_source_with_imports(std::filesystem::path(path));
+
         Lexer lexer(source, name);
         auto token_list = lexer.tokenize();
+        
         Parser parser(token_list, name);
         auto program = parser.parse_program();
+        
         SemanticAnalyzer sema;
         sema.analyze(*program);
         std::cout << "Semantic analysis succeeded" << std::endl;
@@ -45,6 +38,9 @@ int main(int argc, char* argv[]) {
         std::cerr << e.what() << std::endl;
         return 1;
     } catch (const LexError& e) {
+        std::cerr << e.what() << std::endl;
+        return 1;
+    } catch (const ImportError& e) {
         std::cerr << e.what() << std::endl;
         return 1;
     } catch (const std::exception& e) {

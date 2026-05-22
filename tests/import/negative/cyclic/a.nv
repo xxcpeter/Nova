@@ -1,0 +1,5 @@
+import "b.nv";
+
+fn main() : void {
+    return;
+}

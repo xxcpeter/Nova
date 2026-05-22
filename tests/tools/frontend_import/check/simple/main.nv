@@ -1,0 +1,6 @@
+import "math.nv";
+
+fn main() : void {
+    print_int(add(1, 2));
+    return;
+}
