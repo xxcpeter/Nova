@@ -1,0 +1,9 @@
+fn main() : void {
+    let x : int = 3;
+    if (x > 0) {
+        print_str("positive");
+    } else {
+        print_str("non-positive");
+    }
+    return;
+}

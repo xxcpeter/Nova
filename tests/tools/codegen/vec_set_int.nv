@@ -1,0 +1,15 @@
+fn main() : void {
+    let xs : vec<int> = vec_new();
+
+    vec_push(xs, 1);
+    vec_push(xs, 2);
+    vec_push(xs, 3);
+
+    vec_set(xs, 1, 42);
+
+    print_int(vec_get(xs, 0));
+    print_int(vec_get(xs, 1));
+    print_int(vec_get(xs, 2));
+
+    return;
+}

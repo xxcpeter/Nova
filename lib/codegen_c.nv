@@ -1,0 +1,526 @@
+import "parse_tree.nv";
+
+
+struct CodegenSymbols {
+    structs: vec<str>;
+    enums: vec<str>;
+    vec_types: vec<str>;
+}
+
+struct CodegenVar {
+    name: str;
+    type_name: str;
+}
+
+struct CodegenScope {
+    variables: vec<CodegenVar>;
+}
+
+fn c_type_suffix(type_name: str) : str {
+    if (str_eq(type_name, "int")) {
+        return "int";
+    } else if (str_eq(type_name, "bool")) {
+        return "bool";
+    } else if (str_eq(type_name, "str")) {
+        return "str";
+    } else {
+        return type_name;
+    }
+}
+
+fn c_vec_elem_type(vec_type: str) : str {
+    // NovaVec_int* -> int
+    if (str_contains(vec_type, "*")) {
+        return str_slice(vec_type, 8, str_len(vec_type) - 1);
+    } else {
+        return str_slice(vec_type, 8, str_len(vec_type));
+    }
+}
+
+fn c_vec_type_name(vec_type: str) : str {
+    // vec<int> -> NovaVec_int
+    let elem_suffix : str = str_slice(vec_type, 4, str_len(vec_type) - 1);
+    return str_concat("NovaVec_", c_type_suffix(elem_suffix));
+}
+
+fn gen_c_type(type_name: str, symbols: CodegenSymbols) : str {
+    if (str_eq(type_name, "int")) {
+        return "int";
+    } else if (str_eq(type_name, "bool")) {
+        return "bool";
+    } else if (str_eq(type_name, "str")) {
+        return "const char*";
+    } else if (str_eq(type_name, "void")) {
+        return "void";
+    } else if (vec_str_contains(symbols.structs, type_name)) {
+        return type_name;
+    } else if (vec_str_contains(symbols.enums, type_name)) {
+        return type_name;
+    } else if (str_starts_with(type_name, "vec<") && str_eq(str_slice(type_name, str_len(type_name) - 1, str_len(type_name)), ">")) {
+        return str_concat(c_vec_type_name(type_name), "*");
+    } else {
+        codegen_error(str_concat("unsupported type in codegen: ", type_name));
+        return "";
+    }
+}
+
+fn infer_codegen_expr_type(expr: ParseNode, scope: CodegenScope) : str {
+    if (expr.kind == ParseNodeKind.IntLiteralExpr) {
+        return "int";
+    } else if (expr.kind == ParseNodeKind.BoolLiteralExpr) {
+        return "bool";
+    } else if (expr.kind == ParseNodeKind.StrLiteralExpr) {
+        return "str";
+    } else if (expr.kind == ParseNodeKind.IdentifierExpr) {
+        let var_name : str = expr.name;
+        let i : int = vec_len(scope.variables) - 1;
+        while (i >= 0) {
+            let var_decl : CodegenVar = vec_get(scope.variables, i);
+            if (str_eq(var_decl.name, var_name)) {
+                return var_decl.type_name;
+            }
+            i = i - 1;
+        }
+        codegen_error(str_concat("undefined variable in codegen: ", var_name));
+        return "";
+    } else {
+        codegen_error(str_concat("unsupported expression type for type inference in codegen: ", parse_node_header(expr)));
+        return "";
+    }
+}
+
+fn emit_c_indent(out: int, indent: int) : void {
+    let i : int = 0;
+    while (i < indent) {
+        buf_push_str(out, "    ");
+        i = i + 1;
+    }
+}
+
+fn emit_c_line(out: int, indent: int, line: str) : void {
+    emit_c_indent(out, indent);
+    buf_push_str(out, line);
+    buf_push_str(out, "\n");
+}
+
+fn gen_c_expr(out: int, expr: ParseNode, symbols: CodegenSymbols, scope: CodegenScope, expected_type: str) : str {
+    if (expr.kind == ParseNodeKind.IntLiteralExpr) {
+        return expr.value;
+    } else if (expr.kind == ParseNodeKind.BoolLiteralExpr) {
+        if (str_eq(expr.value, "true")) {
+            return "true";
+        } else {
+            return "false";
+        }
+    } else if (expr.kind == ParseNodeKind.StrLiteralExpr) {
+        return expr.value;
+    } else if (expr.kind == ParseNodeKind.IdentifierExpr) {
+        return expr.name;
+    } else if (expr.kind == ParseNodeKind.UnaryExpr) {
+        let operand : str = gen_c_expr(out, vec_get(expr.children, 0), symbols, scope, expected_type);
+        let op : str = expr.name;
+        return str_concat("(", str_concat(op, str_concat(operand, ")")));
+    } else if (expr.kind == ParseNodeKind.BinaryExpr) {
+        let left : str = gen_c_expr(out, vec_get(expr.children, 0), symbols, scope, expected_type);
+        let right : str = gen_c_expr(out, vec_get(expr.children, 1), symbols, scope, expected_type);
+        let op : str = expr.name;
+        return str_concat("(", str_concat(left, str_concat(" ", str_concat(op, str_concat(" ", str_concat(right, ")"))))));
+    } else if (expr.kind == ParseNodeKind.AssignExpr) {
+        let left : str = gen_c_expr(out, vec_get(expr.children, 0), symbols, scope, expected_type);
+        let right : str = gen_c_expr(out, vec_get(expr.children, 1), symbols, scope, expected_type);
+        return str_concat(left, str_concat(" = ", right));
+    } else if (expr.kind == ParseNodeKind.CallExpr) {
+        if (str_eq(expr.name, "vec_new")) {
+            let vec_type : str = gen_c_type(expected_type, symbols);
+            let elem_suffix : str = c_type_suffix(c_vec_elem_type(vec_type));
+            return str_concat("nova_vec_", str_concat(elem_suffix, "_new()"));
+        } else if (str_eq(expr.name, "vec_get")) {
+            let vec_expr : ParseNode = vec_get(expr.children, 0);
+            let vec_type : str = infer_codegen_expr_type(vec_expr, scope);
+            let elem_suffix : str = c_type_suffix(c_vec_elem_type(vec_type));
+
+            let vec_c : str = gen_c_expr(out, vec_expr, symbols, scope, "");
+            let index_c : str = gen_c_expr(out, vec_get(expr.children, 1), symbols, scope, "int");
+
+            return str_concat("nova_vec_", str_concat(elem_suffix, str_concat("_get(", str_concat(vec_c, str_concat(", ", str_concat(index_c, ")"))))));
+        } else if (str_eq(expr.name, "vec_set")) {
+            let vec_expr : ParseNode = vec_get(expr.children, 0);
+            let vec_type : str = infer_codegen_expr_type(vec_expr, scope);
+            let elem_suffix : str = c_type_suffix(c_vec_elem_type(vec_type));
+
+            let vec_c : str = gen_c_expr(out, vec_expr, symbols, scope, "");
+            let index_c : str = gen_c_expr(out, vec_get(expr.children, 1), symbols, scope, "int");
+            let value_c : str = gen_c_expr(out, vec_get(expr.children, 2), symbols, scope, elem_suffix);
+
+            return str_concat("nova_vec_", str_concat(elem_suffix, str_concat("_set(", str_concat(vec_c, str_concat(", ", str_concat(index_c, str_concat(", ", str_concat(value_c, ")"))))))));
+        } else if (str_eq(expr.name, "vec_len")) {
+            let vec_expr : ParseNode = vec_get(expr.children, 0);
+            let vec_type : str = infer_codegen_expr_type(vec_expr, scope);
+            let elem_suffix : str = c_type_suffix(c_vec_elem_type(vec_type));
+
+            let vec_c : str = gen_c_expr(out, vec_expr, symbols, scope, "");
+
+            return str_concat("nova_vec_", str_concat(elem_suffix, str_concat("_len(", str_concat(vec_c, ")"))));
+        } else if (str_eq(expr.name, "vec_push")) {
+            let vec_expr : ParseNode = vec_get(expr.children, 0);
+            let vec_type : str = infer_codegen_expr_type(vec_expr, scope);
+            let elem_suffix : str = c_type_suffix(c_vec_elem_type(vec_type));
+
+            let vec_c : str = gen_c_expr(out, vec_expr, symbols, scope, "");
+            let value_c : str = gen_c_expr(out, vec_get(expr.children, 1), symbols, scope, elem_suffix);
+
+            return str_concat("nova_vec_", str_concat(elem_suffix, str_concat("_push(", str_concat(vec_c, str_concat(", ", str_concat(value_c, ")"))))));
+        } else {
+            let func_name : str = expr.name;
+            let args : str = "";
+            let i : int = 0;
+            while (i < vec_len(expr.children)) {
+                args = str_concat(args, gen_c_expr(out, vec_get(expr.children, i), symbols, scope, expected_type));
+                if (i < vec_len(expr.children) - 1) {
+                    args = str_concat(args, ", ");
+                }
+                i = i + 1;
+            }
+            return str_concat(func_name, str_concat("(", str_concat(args, ")")));
+        }
+    } else if (expr.kind == ParseNodeKind.FieldAccessExpr) {
+        let struct_expr : str = gen_c_expr(out, vec_get(expr.children, 0), symbols, scope, expected_type);
+        let field_name : str = expr.name;
+        if (vec_str_contains(symbols.enums, struct_expr)) {
+            return str_concat(struct_expr, str_concat("_", field_name));
+        } else {
+            return str_concat(struct_expr, str_concat(".", field_name));
+        }
+    } else if (expr.kind == ParseNodeKind.StructLiteralExpr) {
+        let struct_name : str = expr.name;
+        let fields : str = "";
+        let i : int = 0;
+        while (i < vec_len(expr.children)) {
+            let field_init : ParseNode = vec_get(expr.children, i);
+            if (field_init.kind == ParseNodeKind.StructFieldInitExpr) {
+                let field_name : str = field_init.name;
+                let field_value : str = gen_c_expr(out, vec_get(field_init.children, 0), symbols, scope, expected_type);
+                fields = str_concat(fields, str_concat(" .", str_concat(field_name, str_concat(" = ", field_value))));
+                if (i < vec_len(expr.children) - 1) {
+                    fields = str_concat(fields, ",");
+                }
+            } else {
+                codegen_error(str_concat("unsupported struct literal field in codegen: ", parse_node_header(field_init)));
+            }
+            i = i + 1;
+        }
+        return str_concat("((", str_concat(struct_name, str_concat("){", str_concat(fields, " })"))));
+    } else {
+        codegen_error(str_concat("unsupported expression type in codegen: ", parse_node_header(expr)));
+        return "";
+    }
+}
+
+fn gen_c_stmt(out: int, stmt: ParseNode, indent: int, function_name: str, return_type: str, symbols: CodegenSymbols, scope: CodegenScope) : void {
+    if (stmt.kind == ParseNodeKind.LetStmt) {
+        let var_type : str = gen_c_type(stmt.value, symbols);
+        let var_name : str = stmt.name;
+        vec_push(scope.variables, CodegenVar { name: var_name, type_name: var_type });
+        let init_expr : str = gen_c_expr(out, vec_get(stmt.children, 0), symbols, scope, stmt.value);
+        emit_c_line(out, indent, str_concat(var_type, str_concat(" ", str_concat(var_name, str_concat(" = ", str_concat(init_expr, ";"))))));
+    } else if (stmt.kind == ParseNodeKind.IfStmt) {
+        let condition : str = gen_c_expr(out, vec_get(vec_get(stmt.children, 0).children, 0), symbols, scope, "");
+        emit_c_line(out, indent, str_concat("if (", str_concat(condition, ") {")));
+        gen_c_block(out, vec_get(vec_get(stmt.children, 1).children, 0), indent + 1, function_name, return_type, symbols, scope);
+        if (vec_len(stmt.children) > 2) {
+            emit_c_line(out, indent, "} else {");
+            gen_c_block(out, vec_get(vec_get(stmt.children, 2).children, 0), indent + 1, function_name, return_type, symbols, scope);
+            emit_c_line(out, indent, "}");
+        } else {
+            emit_c_line(out, indent, "}");
+        }
+    } else if (stmt.kind == ParseNodeKind.WhileStmt) {
+        let condition : str = gen_c_expr(out, vec_get(vec_get(stmt.children, 0).children, 0), symbols, scope, "");
+        emit_c_line(out, indent, str_concat("while (", str_concat(condition, ") {")));
+        gen_c_block(out, vec_get(stmt.children, 1), indent + 1, function_name, return_type, symbols, scope);
+        emit_c_line(out, indent, "}");
+    } else if (stmt.kind == ParseNodeKind.ReturnStmt) {
+        if (vec_len(stmt.children) == 0) {
+            if (str_eq(function_name, "main")) {
+                emit_c_line(out, indent, "return 0;");
+            } else {
+                emit_c_line(out, indent, "return;");
+            }
+        } else {
+            let ret_expr : str = gen_c_expr(out, vec_get(stmt.children, 0), symbols, scope, return_type);
+            emit_c_line(out, indent, str_concat("return ", str_concat(ret_expr, ";")));
+        }
+    } else if (stmt.kind == ParseNodeKind.BlockStmt) {
+        emit_c_line(out, indent, "{");
+        gen_c_block(out, stmt, indent + 1, function_name, return_type, symbols, scope);
+        emit_c_line(out, indent, "}");
+    } else if (stmt.kind == ParseNodeKind.ExprStmt) {
+        let expr_str : str = gen_c_expr(out, vec_get(stmt.children, 0), symbols, scope, "");
+        emit_c_line(out, indent, str_concat(expr_str, ";"));
+    } else {
+        codegen_error(str_concat("unsupported statement type in codegen: ", parse_node_header(stmt)));
+    }
+}
+
+fn gen_c_block(out: int, block: ParseNode, indent: int, function_name: str, return_type: str, symbols: CodegenSymbols, scope: CodegenScope) : void {
+    let i : int = 0;
+    while (i < vec_len(block.children)) {
+        gen_c_stmt(out, vec_get(block.children, i), indent, function_name, return_type, symbols, scope);
+        i = i + 1;
+    }
+}
+
+fn gen_c_function_signature(func: ParseNode, symbols: CodegenSymbols) : str {
+    if (str_eq(func.name, "main")) {
+        return "int main(int argc, char** argv)";
+    }
+    let ret_type : str = gen_c_type(func.value, symbols);
+    let params : str = "";
+    let i : int = 0;
+    let first : bool = true;
+    while (i < vec_len(func.children)) {
+        let param : ParseNode = vec_get(func.children, i);
+        if (param.kind == ParseNodeKind.ParamDecl) {
+            if (!first) {
+                params = str_concat(params, ", ");
+            }
+            let param_type : str = gen_c_type(param.value, symbols);
+            let param_name : str = param.name;
+            params = str_concat(
+                params,
+                str_concat(param_type, str_concat(" ", param_name))
+            );
+            first = false;
+        }
+        i = i + 1;
+    }
+    return str_concat(ret_type, str_concat(" ", str_concat(func.name, str_concat("(", str_concat(params, ")")))));
+}
+
+fn gen_c_function(out: int, func: ParseNode, is_prototype: bool, symbols: CodegenSymbols) : void {
+    let signature : str = gen_c_function_signature(func, symbols);
+    if (is_prototype) {
+        emit_c_line(out, 0, str_concat(signature, ";"));
+    } else {
+        emit_c_line(out, 0, str_concat(signature, " {"));
+        if (str_eq(func.name, "main")) {
+            emit_c_line(out, 1, "nova_runtime_init(argc, argv);");
+        }
+        let scope : CodegenScope = CodegenScope { variables: vec_new() };
+        let i : int = 0;
+        while (i < vec_len(func.children)) {
+            let child : ParseNode = vec_get(func.children, i);
+            if (child.kind == ParseNodeKind.ParamDecl) {
+                vec_push(scope.variables, CodegenVar {
+                    name: child.name,
+                    type_name: gen_c_type(child.value, symbols)
+                });
+            }
+            i = i + 1;
+        }
+        gen_c_block(out, vec_get(func.children, vec_len(func.children) - 1), 1, func.name, func.value, symbols, scope);
+        emit_c_line(out, 0, "}\n");
+    }
+}
+
+fn collect_vec_types_in_node(node: ParseNode, symbols: CodegenSymbols) : void {
+    if (node.kind == ParseNodeKind.ParamDecl || node.kind == ParseNodeKind.FieldDecl || 
+        node.kind == ParseNodeKind.FunctionDecl || node.kind == ParseNodeKind.LetStmt) {
+        if (str_starts_with(node.value, "vec<") && str_eq(str_slice(node.value, str_len(node.value) - 1, str_len(node.value)), ">")) {
+            if (!vec_str_contains(symbols.vec_types, node.value)) {
+                vec_push(symbols.vec_types, node.value);
+            }
+        }
+    }
+    let i : int = 0;
+    while (i < vec_len(node.children)) {
+        collect_vec_types_in_node(vec_get(node.children, i), symbols);
+        i = i + 1;
+    }
+}
+
+fn collect_codegen_symbols(program: ParseNode) : CodegenSymbols {
+    let symbols : CodegenSymbols = CodegenSymbols { structs: vec_new(), enums: vec_new(), vec_types: vec_new() };
+    let i : int = 0;
+    while (i < vec_len(program.children)) {
+        let child : ParseNode = vec_get(program.children, i);
+        if (child.kind == ParseNodeKind.StructDecl) {
+            vec_push(symbols.structs, child.name);
+        } else if (child.kind == ParseNodeKind.EnumDecl) {
+            vec_push(symbols.enums, child.name);
+        }
+        collect_vec_types_in_node(child, symbols);
+        i = i + 1;
+    }
+    return symbols;
+}
+
+fn gen_c_enum_decl(out: int, enum_node: ParseNode, symbols: CodegenSymbols) : void {
+    let enum_name : str = enum_node.name;
+    emit_c_line(out, 0, str_concat("typedef enum ", str_concat(enum_name, " {")));
+    let i : int = 0;
+    while (i < vec_len(enum_node.children)) {
+        let member : ParseNode = vec_get(enum_node.children, i);
+        if (i != vec_len(enum_node.children) - 1) {
+            emit_c_line(out, 1, str_concat(enum_name, str_concat("_", str_concat(member.name, ","))));
+        } else {
+            emit_c_line(out, 1, str_concat(enum_name, str_concat("_", member.name)));
+        }
+        i = i + 1;
+    }
+    emit_c_line(out, 0, str_concat("} ", str_concat(enum_name, ";")));
+}
+
+fn gen_c_struct_decl(out: int, struct_node: ParseNode, symbols: CodegenSymbols) : void {
+    let struct_name : str = struct_node.name;
+    emit_c_line(out, 0, str_concat("typedef struct ", str_concat(struct_name, str_concat(" ", str_concat(struct_name, ";")))));
+}
+
+fn gen_c_struct_definition(out: int, struct_node: ParseNode, symbols: CodegenSymbols) : void {
+    let struct_name : str = struct_node.name;
+    emit_c_line(out, 0, str_concat("struct ", str_concat(struct_name, " {")));
+    let i : int = 0;
+    while (i < vec_len(struct_node.children)) {
+        let field : ParseNode = vec_get(struct_node.children, i);
+        if (field.kind == ParseNodeKind.FieldDecl) {
+            let field_type : str = gen_c_type(field.value, symbols);
+            let field_name : str = field.name;
+            emit_c_line(out, 1, str_concat(field_type, str_concat(" ", str_concat(field_name, ";"))));
+        } else {
+            codegen_error(str_concat("unsupported struct field in codegen: ", parse_node_header(field)));
+        }
+        i = i + 1;
+    }
+    emit_c_line(out, 0, "};");
+}
+
+fn gen_c_vec_decl(out: int, symbols: CodegenSymbols) : void {
+    let i : int = 0;
+    while (i < vec_len(symbols.vec_types)) {
+        let vec_type_name : str = c_vec_type_name(vec_get(symbols.vec_types, i));
+        emit_c_line(out, 0, str_concat("typedef struct ", str_concat(vec_type_name, str_concat(" ", str_concat(vec_type_name, ";")))));
+        i = i + 1;
+    }
+    emit_c_line(out, 0, "");
+}
+
+fn gen_c_vec_definition(out: int, symbols: CodegenSymbols) : void {
+    let i : int = 0;
+    while (i < vec_len(symbols.vec_types)) {
+        let vec_type : str = vec_get(symbols.vec_types, i);
+        let vec_type_name : str = c_vec_type_name(vec_type);
+        let elem_suffix : str = c_type_suffix(c_vec_elem_type(vec_type_name));
+        let elem_c_type : str = gen_c_type(c_vec_elem_type(vec_type_name), symbols);
+        emit_c_line(out, 0, str_concat("struct ", str_concat(vec_type_name, " {")));
+        emit_c_line(out, 1, str_concat(elem_c_type, "* data;"));
+        emit_c_line(out, 1, "size_t len;");
+        emit_c_line(out, 1, "size_t cap;");
+        emit_c_line(out, 0, "};");
+        i = i + 1;
+        emit_c_line(out, 0, "");
+    }
+}
+
+fn gen_c_vec_functions(out: int, symbols: CodegenSymbols) : void {
+    let i : int = 0;
+    while (i < vec_len(symbols.vec_types)) {
+        let vec_type : str = vec_get(symbols.vec_types, i);
+        let vec_type_name : str = c_vec_type_name(vec_type);
+        let elem_suffix : str = c_type_suffix(c_vec_elem_type(vec_type_name));
+        let elem_c_type : str = gen_c_type(c_vec_elem_type(vec_type_name), symbols);
+        // vec_new
+        emit_c_line(out, 0, str_concat("static NovaVec_", str_concat(elem_suffix, str_concat("* nova_vec_", str_concat(elem_suffix, "_new(void) {")))));
+        emit_c_line(out, 1, str_concat("NovaVec_", str_concat(elem_suffix, str_concat("* vec = malloc(sizeof(NovaVec_", str_concat(elem_suffix, "));")))));
+        emit_c_line(out, 2, "if (!vec) {nova_runtime_error(\"out of memory\");}");
+        emit_c_line(out, 1, "vec->data = NULL;");
+        emit_c_line(out, 1, "vec->len = 0;");
+        emit_c_line(out, 1, "vec->cap = 0;");
+        emit_c_line(out, 1, "return vec;");
+        emit_c_line(out, 0, "}\n");
+        // vec_push
+        emit_c_line(out, 0, str_concat("static void nova_vec_", str_concat(elem_suffix, str_concat("_push(NovaVec_", str_concat(elem_suffix, str_concat("* vec, ", str_concat(elem_c_type, " value) {")))))));
+        emit_c_line(out, 1, "if (vec->len >= vec->cap) {");
+        emit_c_line(out, 2, "vec->cap = vec->cap == 0 ? 4 : vec->cap * 2;");
+        emit_c_line(out, 2, str_concat(elem_c_type, str_concat("* new_data = realloc(vec->data, sizeof(", str_concat(elem_c_type, ") * vec->cap);"))));
+        emit_c_line(out, 2, "if (!new_data) {nova_runtime_error(\"out of memory\");}");
+        emit_c_line(out, 2, "vec->data = new_data;");
+        emit_c_line(out, 1, "}");
+        emit_c_line(out, 1, "vec->data[vec->len++] = value;");
+        emit_c_line(out, 0, "}\n");
+        // vec_get
+        emit_c_line(out, 0, str_concat("static ", str_concat(elem_c_type, str_concat(" nova_vec_", str_concat(elem_suffix, str_concat("_get(NovaVec_", str_concat(elem_suffix, "* vec, size_t index) {")))))));
+        emit_c_line(out, 1, "if (index >= vec->len) {nova_runtime_error(\"vector index out of bounds\");}");
+        emit_c_line(out, 1, "return vec->data[index];");
+        emit_c_line(out, 0, "}\n");
+        // vec_set
+        emit_c_line(out, 0, str_concat("static void nova_vec_", str_concat(elem_suffix, str_concat("_set(NovaVec_", str_concat(elem_suffix, str_concat("* vec, size_t index, ", str_concat(elem_c_type, " value) {")))))));
+        emit_c_line(out, 1, "if (index >= vec->len) {nova_runtime_error(\"vector index out of bounds\");}");
+        emit_c_line(out, 1, "vec->data[index] = value;");
+        emit_c_line(out, 0, "}\n");
+        // vec_len
+        emit_c_line(out, 0, str_concat("static int nova_vec_", str_concat(elem_suffix, str_concat("_len(NovaVec_", str_concat(elem_suffix, "* vec) {")))));
+        emit_c_line(out, 1, "return (int)vec->len;");
+        emit_c_line(out, 0, "}\n");
+        i = i + 1;
+    }
+}
+
+fn gen_c_program(program: ParseNode) : str {
+    let out : int = buf_new();
+    emit_c_line(out, 0, "#include <stddef.h>\n#include <stdlib.h>\n#include <stdbool.h>\n#include \"nova_runtime.h\"\n");
+    let symbols : CodegenSymbols = collect_codegen_symbols(program);
+
+    let i : int = 0;
+    while (i < vec_len(program.children)) {
+        let child : ParseNode = vec_get(program.children, i);
+        if (child.kind == ParseNodeKind.EnumDecl) {
+            gen_c_enum_decl(out, child, symbols);
+            emit_c_line(out, 0, "");
+        }
+        i = i + 1;
+    }
+
+    i = 0;
+    while (i < vec_len(program.children)) {
+        let child : ParseNode = vec_get(program.children, i);
+        if (child.kind == ParseNodeKind.StructDecl) {
+            gen_c_struct_decl(out, child, symbols);
+            emit_c_line(out, 0, "");
+        }
+        i = i + 1;
+    }
+
+    gen_c_vec_decl(out, symbols);
+
+    i = 0;
+    while (i < vec_len(program.children)) {
+        let child : ParseNode = vec_get(program.children, i);
+        if (child.kind == ParseNodeKind.StructDecl) {
+            gen_c_struct_definition(out, child, symbols);
+            emit_c_line(out, 0, "");
+        }
+        i = i + 1;
+    }
+
+    gen_c_vec_definition(out, symbols);
+    gen_c_vec_functions(out, symbols);
+
+    i = 0;
+    while (i < vec_len(program.children)) {
+        let child : ParseNode = vec_get(program.children, i);
+        if (child.kind == ParseNodeKind.FunctionDecl) {
+            gen_c_function(out, child, true, symbols);
+        }
+        i = i + 1;
+    }
+    emit_c_line(out, 0, "");
+    i = 0;
+    while (i < vec_len(program.children)) {
+        let child : ParseNode = vec_get(program.children, i);
+        if (child.kind == ParseNodeKind.FunctionDecl) {
+            gen_c_function(out, child, false, symbols);
+        }
+        i = i + 1;
+    }
+    return buf_to_str(out);
+}

@@ -1,0 +1,10 @@
+struct Counter {
+    value: int;
+}
+
+fn main() : void {
+    let c : Counter = Counter { value: 1 };
+    c.value = c.value + 41;
+    print_int(c.value);
+    return;
+}

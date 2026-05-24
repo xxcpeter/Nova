@@ -1,0 +1,14 @@
+fn print_first(xs: vec<str>) : void {
+    print_str(vec_get(xs, 0));
+    return;
+}
+
+fn main() : void {
+    let words : vec<str> = vec_new();
+
+    vec_push(words, "alpha");
+    vec_push(words, "beta");
+
+    print_first(words);
+    return;
+}

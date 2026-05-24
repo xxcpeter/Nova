@@ -1,0 +1,25 @@
+import "../lib/source_loader.nv";
+import "../lib/tokenizer.nv";
+import "../lib/parser.nv";
+import "../lib/checker.nv";
+import "../lib/codegen_c.nv";
+
+fn main() : void {
+    if (arg_count() != 3) {
+        print_str("Usage: nova_codegen <input.nv> <output.c>");
+        return;
+    }
+
+    let input_path : str = arg_get(1);
+    let output_path : str = arg_get(2);
+
+    let source : str = load_source_with_imports(input_path);
+    let tokens : vec<Token> = tokenize(source);
+    let tree : ParseNode = parse_program_tree(tokens);
+
+    check_program(tree);
+
+    let c_source : str = gen_c_program(tree);
+    write_file(output_path, c_source);
+    return;
+}

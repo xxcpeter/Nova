@@ -1,0 +1,15 @@
+fn make_vec() : vec<int> {
+    return vec_new();
+}
+
+fn main() : void {
+    let xs : vec<int> = make_vec();
+
+    vec_push(xs, 7);
+    vec_push(xs, 8);
+
+    print_int(vec_len(xs));
+    print_int(vec_get(xs, 0));
+    print_int(vec_get(xs, 1));
+    return;
+}

@@ -1,0 +1,13 @@
+fn main() : void {
+    let xs : vec<int> = vec_new();
+    vec_push(xs, 1);
+
+    {
+        let xs : vec<str> = vec_new();
+        vec_push(xs, "inner");
+        print_str(vec_get(xs, 0));
+    }
+
+    print_int(vec_get(xs, 0));
+    return;
+}

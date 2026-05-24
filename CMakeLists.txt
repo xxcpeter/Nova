@@ -99,6 +99,7 @@ set(TEXT_TEST_DRIVER ${CMAKE_CURRENT_SOURCE_DIR}/cmake/RunTextCompareTest.cmake)
 set(CODEGEN_TEST_DRIVER ${CMAKE_CURRENT_SOURCE_DIR}/cmake/RunCodegenTest.cmake)
 set(NOVA_TOOL_TEST_DRIVER ${CMAKE_CURRENT_SOURCE_DIR}/cmake/RunNovaToolTest.cmake)
 set(NOVA_TOOL_NEGATIVE_TEST_DRIVER ${CMAKE_CURRENT_SOURCE_DIR}/cmake/RunNovaToolNegativeTest.cmake)
+set(NOVA_CODEGEN_TOOL_TEST_DRIVER ${CMAKE_CURRENT_SOURCE_DIR}/cmake/RunNovaCodegenToolTest.cmake)
 
 function(add_lexer_positive_test name)
     add_test(
@@ -449,6 +450,22 @@ function(add_nova_frontend_import_check_test name)
     set_tests_properties(nova_tool_frontend_import_check_${name} PROPERTIES LABELS "nova_tool;frontend;import;check")
 endfunction()
 
+function(add_nova_codegen_tool_test name)
+    add_test(
+        NAME nova_tool_codegen_${name}
+        COMMAND ${CMAKE_COMMAND}
+            -DNOVA_COMPILE=$<TARGET_FILE:nova_compile>
+            -DTOOL_SOURCE=${CMAKE_CURRENT_SOURCE_DIR}/tools/nova_codegen.nv
+            -DINPUT=${CMAKE_CURRENT_SOURCE_DIR}/tests/tools/codegen/${name}.nv
+            -DEXPECT=${CMAKE_CURRENT_SOURCE_DIR}/tests/tools/codegen/${name}.out
+            -DRUNTIME_DIR=${CMAKE_CURRENT_SOURCE_DIR}/runtime
+            -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/nova_tool_tests/codegen_${name}
+            -DCC=cc
+            -P ${NOVA_CODEGEN_TOOL_TEST_DRIVER}
+    )
+    set_tests_properties(nova_tool_codegen_${name} PROPERTIES LABELS "nova_tool;codegen")
+endfunction()
+
 
 # step 2
 add_lexer_positive_test(single_tokens)
@@ -683,3 +700,37 @@ add_import_negative_test(missing)
 add_import_negative_test(cyclic)
 
 add_nova_frontend_import_check_test(simple)
+
+# step 19
+add_nova_codegen_tool_test(hello)
+add_nova_codegen_tool_test(arithmetic)
+add_nova_codegen_tool_test(function_call)
+add_nova_codegen_tool_test(if_else)
+add_nova_codegen_tool_test(while_loop)
+add_nova_codegen_tool_test(bool_logic)
+add_nova_codegen_tool_test(string_concat)
+add_nova_codegen_tool_test(recursion)
+
+add_nova_codegen_tool_test(string_len_get)
+add_nova_codegen_tool_test(string_slice_predicates)
+add_nova_codegen_tool_test(int_to_str_concat)
+add_nova_codegen_tool_test(buffer_builder)
+
+add_nova_codegen_tool_test(enum_basic)
+add_nova_codegen_tool_test(enum_function_param)
+
+add_nova_codegen_tool_test(struct_basic)
+add_nova_codegen_tool_test(struct_function_return)
+add_nova_codegen_tool_test(struct_assignment)
+add_nova_codegen_tool_test(struct_nested)
+
+add_nova_codegen_tool_test(vec_int_basic)
+add_nova_codegen_tool_test(vec_set_int)
+add_nova_codegen_tool_test(vec_struct_basic)
+add_nova_codegen_tool_test(vec_param_get)
+add_nova_codegen_tool_test(vec_return_new)
+add_nova_codegen_tool_test(struct_return_literal)
+add_nova_codegen_tool_test(vec_str_basic)
+add_nova_codegen_tool_test(vec_str_param)
+add_nova_codegen_tool_test(vec_struct_param)
+add_nova_codegen_tool_test(vec_shadowing)

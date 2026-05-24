@@ -1,0 +1,18 @@
+enum TokenKind {
+    Ident;
+    Number;
+}
+
+fn is_ident(kind: TokenKind) : bool {
+    return kind == TokenKind.Ident;
+}
+
+fn main() : void {
+    let kind : TokenKind = TokenKind.Ident;
+
+    if (is_ident(kind)) {
+        print_str("identifier");
+    }
+
+    return;
+}

@@ -1,0 +1,8 @@
+fn main() : void {
+    let b : int = buf_new();
+    buf_push_str(b, "x=");
+    buf_push_int(b, 123);
+    buf_push_str(b, ", done");
+    print_str(buf_to_str(b));
+    return;
+}

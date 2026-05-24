@@ -1,0 +1,22 @@
+struct Point {
+    x: int;
+    y: int;
+}
+
+fn print_first(points: vec<Point>) : void {
+    let p : Point = vec_get(points, 0);
+
+    print_int(p.x);
+    print_int(p.y);
+    return;
+}
+
+fn main() : void {
+    let points : vec<Point> = vec_new();
+
+    vec_push(points, Point { x: 5, y: 6 });
+    vec_push(points, Point { x: 7, y: 8 });
+
+    print_first(points);
+    return;
+}

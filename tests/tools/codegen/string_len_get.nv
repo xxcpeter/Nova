@@ -1,0 +1,6 @@
+fn main() : void {
+    let s : str = "abc";
+    print_int(str_len(s));
+    print_int(str_get(s, 1));
+    return;
+}

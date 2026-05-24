@@ -1,0 +1,22 @@
+struct Point {
+    x: int;
+    y: int;
+}
+
+struct Line {
+    start: Point;
+    end: Point;
+}
+
+fn main() : void {
+    let line : Line = Line {
+        start: Point { x: 1, y: 2 },
+        end: Point { x: 3, y: 4 }
+    };
+
+    print_int(line.start.x);
+    print_int(line.start.y);
+    print_int(line.end.x);
+    print_int(line.end.y);
+    return;
+}

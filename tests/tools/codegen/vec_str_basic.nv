@@ -1,0 +1,11 @@
+fn main() : void {
+    let xs : vec<str> = vec_new();
+
+    vec_push(xs, "hello");
+    vec_push(xs, "world");
+
+    print_int(vec_len(xs));
+    print_str(vec_get(xs, 0));
+    print_str(vec_get(xs, 1));
+    return;
+}

@@ -1,0 +1,10 @@
+fn main() : void {
+    let a : bool = true;
+    let b : bool = false;
+
+    if (a && !b) {
+        print_str("ok");
+    }
+
+    return;
+}

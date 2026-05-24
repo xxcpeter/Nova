@@ -1,0 +1,6 @@
+fn main() : void {
+    let x : int = 42;
+    let s : str = str_concat("value=", int_to_str(x));
+    print_str(s);
+    return;
+}
