@@ -1,3 +1,4 @@
+import "../lib/source_loader.nv";
 import "../lib/tokenizer.nv";
 import "../lib/parser.nv";
 
@@ -11,7 +12,7 @@ fn main() : void {
     let input_path : str = arg_get(1);
     let output_path : str = arg_get(2);
 
-    let source : str = read_file(input_path);
+    let source : str = load_source_with_imports(input_path);
     let tokens : vec<Token> = tokenize(source);
     let trace : str = parse_program(tokens);
 

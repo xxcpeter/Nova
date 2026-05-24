@@ -162,7 +162,7 @@ primary        := INT_LITERAL
 
 call           := IDENT "(" arguments? ")"
 arguments      := expression ("," expression)*
-````
+```
 
 Notes:
 

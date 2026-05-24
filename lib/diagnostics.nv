@@ -42,14 +42,14 @@ fn codegen_error(message: str) : void {
     nova_runtime_error(str_concat("CodegenError: ", message));
 }
 
-fn codegen_error_at(node: ParseNode, message: str) : void {
+fn codegen_error_at(line: int, column: int, message: str) : void {
     nova_runtime_error(
         str_concat(
-            "CodegenError at ",
             str_concat(
-                int_to_str(node.line),
-                str_concat(":", str_concat(int_to_str(node.column), str_concat(": ", message)))
-            )
+                "CodegenError at ",
+                str_concat(str_concat(int_to_str(line), ":"), int_to_str(column))
+            ),
+            str_concat(": ", message)
         )
     );
 }

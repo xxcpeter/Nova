@@ -1,4 +1,6 @@
 {
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "Nova",
   "scopeName": "source.nova",
   "patterns": [
     {
@@ -8,31 +10,25 @@
       "include": "#strings"
     },
     {
+      "include": "#imports"
+    },
+    {
       "include": "#keywords"
     },
     {
       "include": "#types"
     },
     {
-      "include": "#booleans"
-    },
-    {
       "include": "#builtins"
     },
     {
+      "include": "#declarations"
+    },
+    {
+      "include": "#enumMembers"
+    },
+    {
       "include": "#numbers"
-    },
-    {
-      "include": "#struct-declarations"
-    },
-    {
-      "include": "#function-declarations"
-    },
-    {
-      "include": "#function-calls"
-    },
-    {
-      "include": "#field-access"
     },
     {
       "include": "#operators"
@@ -55,7 +51,6 @@
         }
       ]
     },
-
     "strings": {
       "patterns": [
         {
@@ -71,7 +66,25 @@
         }
       ]
     },
-
+    "imports": {
+      "patterns": [
+        {
+          "name": "meta.import.nova",
+          "match": "\\b(import)\\s+(\"[^\"]*\")\\s*(;)",
+          "captures": {
+            "1": {
+              "name": "keyword.control.import.nova"
+            },
+            "2": {
+              "name": "string.quoted.double.import-path.nova"
+            },
+            "3": {
+              "name": "punctuation.terminator.statement.nova"
+            }
+          }
+        }
+      ]
+    },
     "keywords": {
       "patterns": [
         {
@@ -80,11 +93,14 @@
         },
         {
           "name": "keyword.declaration.nova",
-          "match": "\\b(fn|let|struct)\\b"
+          "match": "\\b(fn|let|struct|enum|import)\\b"
+        },
+        {
+          "name": "constant.language.boolean.nova",
+          "match": "\\b(true|false)\\b"
         }
       ]
     },
-
     "types": {
       "patterns": [
         {
@@ -96,34 +112,82 @@
           "match": "\\bvec\\b"
         },
         {
-          "name": "entity.name.type.struct.nova",
+          "name": "entity.name.type.nova",
           "match": "\\b[A-Z][A-Za-z0-9_]*\\b"
         }
       ]
     },
-
-    "booleans": {
-      "patterns": [
-        {
-          "name": "constant.language.boolean.nova",
-          "match": "\\b(true|false)\\b"
-        }
-      ]
-    },
-
     "builtins": {
       "patterns": [
         {
           "name": "support.function.runtime.nova",
-          "match": "\\b(print_int|print_str|str_eq|str_concat|str_len|str_get|str_slice|str_starts_with|str_contains|int_to_str|read_file|write_file|buf_new|buf_push_str|buf_push_int|buf_to_str|arg_count|arg_get)\\b(?=\\s*\\()"
+          "match": "\\b(print_int|print_str|str_eq|str_concat|str_len|str_get|str_slice|str_starts_with|str_contains|int_to_str|read_file|write_file|buf_new|buf_push_str|buf_push_int|buf_to_str|arg_count|arg_get|nova_runtime_error)\\b"
         },
         {
           "name": "support.function.vector.nova",
-          "match": "\\b(vec_new|vec_len|vec_push|vec_get|vec_set)\\b(?=\\s*\\()"
+          "match": "\\b(vec_new|vec_push|vec_get|vec_set|vec_len)\\b"
         }
       ]
     },
-
+    "declarations": {
+      "patterns": [
+        {
+          "name": "meta.function.nova",
+          "match": "\\bfn\\s+([A-Za-z_][A-Za-z0-9_]*)",
+          "captures": {
+            "1": {
+              "name": "entity.name.function.nova"
+            }
+          }
+        },
+        {
+          "name": "meta.struct.nova",
+          "match": "\\bstruct\\s+([A-Za-z_][A-Za-z0-9_]*)",
+          "captures": {
+            "1": {
+              "name": "entity.name.type.struct.nova"
+            }
+          }
+        },
+        {
+          "name": "meta.enum.nova",
+          "match": "\\benum\\s+([A-Za-z_][A-Za-z0-9_]*)",
+          "captures": {
+            "1": {
+              "name": "entity.name.type.enum.nova"
+            }
+          }
+        },
+        {
+          "name": "meta.variable.declaration.nova",
+          "match": "\\blet\\s+([A-Za-z_][A-Za-z0-9_]*)",
+          "captures": {
+            "1": {
+              "name": "variable.other.local.nova"
+            }
+          }
+        }
+      ]
+    },
+    "enumMembers": {
+      "patterns": [
+        {
+          "name": "meta.enum-member-access.nova",
+          "match": "\\b([A-Z][A-Za-z0-9_]*)(\\.)([A-Za-z_][A-Za-z0-9_]*)\\b",
+          "captures": {
+            "1": {
+              "name": "entity.name.type.enum.nova"
+            },
+            "2": {
+              "name": "punctuation.accessor.dot.nova"
+            },
+            "3": {
+              "name": "constant.other.enum.member.nova"
+            }
+          }
+        }
+      ]
+    },
     "numbers": {
       "patterns": [
         {
@@ -132,43 +196,6 @@
         }
       ]
     },
-
-    "struct-declarations": {
-      "patterns": [
-        {
-          "name": "entity.name.type.struct.declaration.nova",
-          "match": "(?<=\\bstruct\\s+)[A-Za-z_][A-Za-z0-9_]*"
-        }
-      ]
-    },
-
-    "function-declarations": {
-      "patterns": [
-        {
-          "name": "entity.name.function.declaration.nova",
-          "match": "(?<=\\bfn\\s+)[A-Za-z_][A-Za-z0-9_]*"
-        }
-      ]
-    },
-
-    "function-calls": {
-      "patterns": [
-        {
-          "name": "entity.name.function.call.nova",
-          "match": "\\b[A-Za-z_][A-Za-z0-9_]*\\b(?=\\s*\\()"
-        }
-      ]
-    },
-
-    "field-access": {
-      "patterns": [
-        {
-          "name": "variable.other.member.nova",
-          "match": "(?<=\\.)[A-Za-z_][A-Za-z0-9_]*"
-        }
-      ]
-    },
-
     "operators": {
       "patterns": [
         {
@@ -185,31 +212,38 @@
         },
         {
           "name": "keyword.operator.arithmetic.nova",
-          "match": "[+\\-*/%]"
+          "match": "\\+|-|\\*|/|%"
         },
         {
-          "name": "keyword.operator.access.nova",
+          "name": "punctuation.accessor.dot.nova",
           "match": "\\."
         }
       ]
     },
-
     "punctuation": {
       "patterns": [
         {
-          "name": "punctuation.separator.nova",
-          "match": "[,;:]"
+          "name": "punctuation.terminator.statement.nova",
+          "match": ";"
         },
         {
-          "name": "punctuation.bracket.round.nova",
-          "match": "[()]"
+          "name": "punctuation.separator.comma.nova",
+          "match": ","
         },
         {
-          "name": "punctuation.bracket.curly.nova",
+          "name": "punctuation.separator.colon.nova",
+          "match": ":"
+        },
+        {
+          "name": "punctuation.definition.brace.nova",
           "match": "[{}]"
         },
         {
-          "name": "punctuation.definition.generic.nova",
+          "name": "punctuation.definition.paren.nova",
+          "match": "[()]"
+        },
+        {
+          "name": "punctuation.definition.angle.nova",
           "match": "[<>]"
         }
       ]

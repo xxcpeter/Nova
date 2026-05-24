@@ -1,3 +1,51 @@
-/build
-/.vscode
-/Testing
+# Build directories
+/build/
+/build-*/
+/cmake-build-*/
+/out/
+
+# CMake / CTest generated files
+/Testing/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+CTestTestfile.cmake
+DartConfiguration.tcl
+install_manifest.txt
+
+# Compilation database
+/compile_commands.json
+
+# Generated binaries and object files
+*.o
+*.obj
+*.a
+*.so
+*.dylib
+*.dll
+*.exe
+a.out
+
+# Temporary generated C files
+*.generated.c
+*.tmp.c
+/tmp_*.c
+
+# Local run outputs
+tokens.txt
+*.tmp
+*.log
+
+# Editor / OS files
+/.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Python/cache helper files
+__pycache__/
+*.pyc
+
+# Local scratch
+/scratch/
+/tmp/

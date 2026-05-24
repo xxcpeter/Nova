@@ -1,18 +1,26 @@
 {
-  "name": "nova-syntax",
+  "name": "vscode-nova-syntax",
   "displayName": "Nova Syntax",
-  "description": "Syntax highlighting for the Nova language",
-  "version": "0.0.1",
+  "description": "Syntax highlighting for the Nova programming language.",
+  "version": "0.1.0",
+  "publisher": "nova",
   "engines": {
     "vscode": "^1.80.0"
   },
-  "categories": ["Programming Languages"],
+  "categories": [
+    "Programming Languages"
+  ],
   "contributes": {
     "languages": [
       {
         "id": "nova",
-        "aliases": ["Nova", "nova"],
-        "extensions": [".nv"],
+        "aliases": [
+          "Nova",
+          "nova"
+        ],
+        "extensions": [
+          ".nv"
+        ],
         "configuration": "./language-configuration.json"
       }
     ],

@@ -1,0 +1,30 @@
+import "../lib/tokenizer.nv";
+
+enum Color {
+    Red;
+    Green;
+}
+
+struct Point {
+    x: int;
+    y: int;
+}
+
+fn make_point(x: int, y: int) : Point {
+    return Point { x: x, y: y };
+}
+
+fn main() : void {
+    let c : Color = Color.Red;
+    let p : Point = make_point(1, 2);
+    let xs : vec<int> = vec_new();
+
+    vec_push(xs, p.x);
+
+    if (c == Color.Red && vec_len(xs) > 0) {
+        print_int(vec_get(xs, 0));
+        print_str(str_concat("color=", "red"));
+    }
+
+    return;
+}
