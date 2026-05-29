@@ -264,10 +264,7 @@ void SemanticAnalyzer::visit(const FunctionDecl& func) {
     bool body_returns = false;
     for (const auto& stmt : func.body->statements) {
         stmt->accept(*this);
-        if (last_stmt_returns_) {
-            body_returns = true;
-            break;
-        }
+        body_returns = body_returns || last_stmt_returns_;
     }
 
     pop_scope();
@@ -295,10 +292,7 @@ void SemanticAnalyzer::visit(const BlockStmt& block) {
     bool block_returns = false;
     for (const auto& stmt : block.statements) {
         stmt->accept(*this);
-        if (last_stmt_returns_) {
-            block_returns = true;
-            break;
-        }
+        block_returns = block_returns || last_stmt_returns_;
     }
 
     pop_scope();
@@ -368,7 +362,7 @@ void SemanticAnalyzer::visit(const ReturnStmt& stmt) {
 
 void SemanticAnalyzer::visit(const ExprStmt& stmt) {
     infer_expr_type(*stmt.expr);
-    last_stmt_returns_ = false;
+    last_stmt_returns_ = expr_always_exits(*stmt.expr);
 }
 
 
@@ -650,4 +644,26 @@ void SemanticAnalyzer::visit_vec_set(const CallExpr& expr) {
     Type value_type = infer_expr_type(*expr.arguments[2], vec_type.element_type.get(), "vec_set value");
 
     last_type_ = Type{ TypeKind::Void };
+}
+
+
+bool SemanticAnalyzer::expr_always_exits(const Expr& expr) const {
+    const auto* call = dynamic_cast<const CallExpr*>(&expr);
+    if (!call) {
+        return false;
+    }
+    return is_no_return_function(call->callee);
+}
+
+
+bool SemanticAnalyzer::is_no_return_function(std::string_view name) const {
+    return name == "nova_runtime_error" || 
+           name == "lexer_error" ||
+           name == "parser_error" ||
+           name == "parser_error_at" ||
+           name == "checker_error" ||
+           name == "checker_error_at" ||
+           name == "codegen_error" ||
+           name == "codegen_error_at" ||
+           name == "import_error";
 }

@@ -302,8 +302,6 @@ fn parse_primary(tokens: vec<Token>, pos: int) : ExprParseResult {
         return ExprParseResult { node: inner.node, next_pos: next };
     } else {
         parser_error_at(token_line(tokens, pos), token_column(tokens, pos), "expected expression");
-        let dummy_node : ParseNode = make_node(ParseNodeKind.IntLiteralExpr, "", "0", token_line(tokens, pos), token_column(tokens, pos));
-        return ExprParseResult { node: dummy_node, next_pos: pos + 1 }; // dummy return
     }
 }
 

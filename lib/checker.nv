@@ -73,7 +73,6 @@ fn find_struct(symbols: SymbolTables, name: str) : StructInfo {
     }
     // should never reach here if caller checks has_struct first
     checker_error(str_concat("internal error: struct '", str_concat(name, "' not found in symbol table")));
-    return StructInfo { name: "", fields: vec_new() }; // dummy return
 }
 
 fn has_enum(symbols: SymbolTables, name: str) : bool {
@@ -99,7 +98,6 @@ fn find_enum(symbols: SymbolTables, name: str) : EnumInfo {
     }
     // should never reach here if caller checks has_enum first
     checker_error(str_concat("internal error: enum '", str_concat(name, "' not found in symbol table")));
-    return EnumInfo { name: "", members: vec_new() }; // dummy return
 }
 
 fn has_function(symbols: SymbolTables, name: str) : bool {
@@ -125,7 +123,6 @@ fn find_function(symbols: SymbolTables, name: str) : FunctionInfo {
     }
     // should never reach here if caller checks has_function first
     checker_error(str_concat("internal error: function '", str_concat(name, "' not found in symbol table")));
-    return FunctionInfo { name: "", return_type: "", params: vec_new() }; // dummy return
 }
 
 fn func_has_param(info: FunctionInfo, param_name: str) : bool {
@@ -163,7 +160,6 @@ fn struct_field_type(info: StructInfo, field_name: str) : str {
     }
     // should never reach here if caller checks struct_has_field first
     checker_error(str_concat("internal error: field '", str_concat(field_name, str_concat("' not found in struct '", str_concat(info.name, "'")))));
-    return ""; // dummy return
 }
 
 fn enum_has_member(info: EnumInfo, member_name: str) : bool {
@@ -327,7 +323,6 @@ fn resolve_var_type(stack: ScopeStack, name: str, line: int, column: int) : str 
     }
     // should never reach here if caller checks has_var first
     checker_error(str_concat("internal error: variable '", str_concat(name, "' not found in any scope")));
-    return ""; // dummy return
 }
 
 fn check_struct_decl(node: ParseNode, symbols: SymbolTables) : void {
@@ -594,7 +589,6 @@ fn infer_runtime_builtin_call(expr: ParseNode, symbols: SymbolTables, stack: Sco
         return "void";
     } else {
         checker_error_at(expr.line, expr.column, str_concat("unknown runtime builtin function '", str_concat(expr.name, "'")));
-        return ""; // dummy return
     }
 }
 
@@ -661,7 +655,6 @@ fn infer_vec_intrinsic_call(expr: ParseNode, symbols: SymbolTables, stack: Scope
         return "void";
     } else {
         checker_error_at(expr.line, expr.column, str_concat("unknown vector intrinsic function '", str_concat(expr.name, "'")));
-        return ""; // dummy return
     }
 }
 
@@ -677,7 +670,6 @@ fn infer_expr_type_impl(expr: ParseNode, symbols: SymbolTables, stack: ScopeStac
             return resolve_var_type(stack, expr.name, expr.line, expr.column);
         } else {
             checker_error_at(expr.line, expr.column, str_concat("undefined variable '", str_concat(expr.name, "'")));
-            return ""; // dummy return
         }
     } else if (expr.kind == ParseNodeKind.UnaryExpr) {
         let operand_type : str = infer_expr_type(vec_get(expr.children, 0), symbols, stack);
@@ -715,7 +707,6 @@ fn infer_expr_type_impl(expr: ParseNode, symbols: SymbolTables, stack: ScopeStac
             return "bool";
         } else {
             checker_error_at(expr.line, expr.column, str_concat("unknown binary operator '", str_concat(expr.name, "'")));
-            return ""; // dummy return
         }
     } else if (expr.kind == ParseNodeKind.AssignExpr) {
         let left_expr : ParseNode = vec_get(expr.children, 0);
@@ -771,7 +762,6 @@ fn infer_expr_type_impl(expr: ParseNode, symbols: SymbolTables, stack: ScopeStac
             return struct_field_type(struct_info, expr.name);
         } else {
             checker_error_at(base_expr.line, base_expr.column, str_concat("type '", str_concat(base_type, "' does not support field access")));
-            return ""; // dummy return
         }
     } else if (expr.kind == ParseNodeKind.StructLiteralExpr) {
         if (!has_struct(symbols, expr.name)) {
@@ -802,7 +792,6 @@ fn infer_expr_type_impl(expr: ParseNode, symbols: SymbolTables, stack: ScopeStac
         return expr.name;
     } else {
         checker_error_at(expr.line, expr.column, "expression type inference not implemented for this expression kind");
-        return ""; // dummy return
     }
 }
 

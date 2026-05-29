@@ -115,6 +115,8 @@ private:
     void expect_type(Type actual, Type expected, const SourceLocation& loc, std::string_view context) const;
     bool is_lvalue(const Expr& expr) const;
     bool is_keyword(std::string_view name) const;
+    bool expr_always_exits(const Expr& expr) const;
+    bool is_no_return_function(std::string_view name) const;
 };
 
 
