@@ -181,10 +181,10 @@ fn infer_runtime_call_type(name: str) : str {
 
 fn lookup_codegen_function_type(symbols: CodegenSymbols, func_name: str) : str {
     let i : int = 0;
-    while (i < vec_len(symbols.structs)) {
-        let struct_info : CodegenStructInfo = vec_get(symbols.structs, i);
-        if (str_eq(struct_info.name, func_name)) {
-            return struct_info.name;
+    while (i < vec_len(symbols.functions)) {
+        let func_info : CodegenFunctionInfo = vec_get(symbols.functions, i);
+        if (str_eq(func_info.name, func_name)) {
+            return func_info.return_type;
         }
         i = i + 1;
     }
@@ -209,6 +209,52 @@ fn infer_codegen_expr_type(expr: ParseNode, symbols: CodegenSymbols, scope: Code
             i = i - 1;
         }
         codegen_error(str_concat("undefined variable in codegen: ", var_name));
+    } else if (expr.kind == ParseNodeKind.UnaryExpr) {
+        let operand_type : str = infer_codegen_expr_type(vec_get(expr.children, 0), symbols, scope);
+        if (str_eq(expr.name, "!")) {
+            if (!str_eq(operand_type, "bool")) {
+                codegen_error("unary operator '!' requires 'bool' operand in codegen");
+            }
+            return "bool";
+        } else if (str_eq(expr.name, "-")) {
+            if (!str_eq(operand_type, "int")) {
+                codegen_error("unary operator '-' requires 'int' operand in codegen");
+            }
+            return "int";
+        } else {
+            codegen_error("unsupported unary operator for type inference in codegen: " + expr.name);
+        }
+    } else if (expr.kind == ParseNodeKind.BinaryExpr) {
+        let left_type : str = infer_codegen_expr_type(vec_get(expr.children, 0), symbols, scope);
+        let right_type : str = infer_codegen_expr_type(vec_get(expr.children, 1), symbols, scope);
+        if (str_eq(expr.name, "+")) {
+            if (str_eq(left_type, "int") && str_eq(right_type, "int")) {
+                return "int";
+            } else if (str_eq(left_type, "str") && str_eq(right_type, "str")) {
+                return "str";
+            }
+            codegen_error("binary operator '+' requires 'int' or 'str' operands in codegen");
+        } else if (str_eq(expr.name, "-") || str_eq(expr.name, "*") || 
+                   str_eq(expr.name, "/") || str_eq(expr.name, "%")) {
+            if (!str_eq(left_type, "int") || !str_eq(right_type, "int")) {
+                codegen_error("binary operator '" + expr.name + "' requires 'int' operands in codegen");
+            }
+            return "int";
+        } else if (str_eq(expr.name, "==") || str_eq(expr.name, "!=") ||
+                   str_eq(expr.name, "<") || str_eq(expr.name, "<=") || 
+                   str_eq(expr.name, ">") || str_eq(expr.name, ">=")) {
+            if (!str_eq(left_type, right_type)) {
+                codegen_error("binary operator '" + expr.name + "' requires operands of the same type in codegen");
+            }
+            return "bool";
+        } else if (str_eq(expr.name, "&&") || str_eq(expr.name, "||")) {
+            if (!str_eq(left_type, "bool") || !str_eq(right_type, "bool")) {
+                codegen_error("binary operator '" + expr.name + "' requires 'bool' operands in codegen");
+            }
+            return "bool";
+        } else {
+            codegen_error("unsupported binary operator for type inference in codegen: " + expr.name);
+        }
     } else if (expr.kind == ParseNodeKind.FieldAccessExpr) {
         let base : ParseNode = vec_get(expr.children, 0);
         let field_name : str = expr.name;
@@ -286,7 +332,12 @@ fn gen_c_expr(out: int, expr: ParseNode, symbols: CodegenSymbols, scope: Codegen
         let left : str = gen_c_expr(out, vec_get(expr.children, 0), symbols, scope, expected_type);
         let right : str = gen_c_expr(out, vec_get(expr.children, 1), symbols, scope, expected_type);
         let op : str = expr.name;
-        return str_concat("(", str_concat(left, str_concat(" ", str_concat(op, str_concat(" ", str_concat(right, ")"))))));
+        let result_type : str = infer_codegen_expr_type(expr, symbols, scope);
+        if (str_eq(result_type, "str") && str_eq(op, "+")) {
+            return "str_concat(" + left + ", " + right + ")";
+        } else {
+            return "(" + left + " " + op + " " + right + ")";
+        }
     } else if (expr.kind == ParseNodeKind.AssignExpr) {
         let left : str = gen_c_expr(out, vec_get(expr.children, 0), symbols, scope, expected_type);
         let right : str = gen_c_expr(out, vec_get(expr.children, 1), symbols, scope, expected_type);

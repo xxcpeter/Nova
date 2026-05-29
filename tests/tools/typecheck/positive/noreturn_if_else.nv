@@ -1,0 +1,11 @@
+fn choose(x: bool) : str {
+    if (x) {
+        return "yes";
+    } else {
+        nova_runtime_error("no");
+    }
+}
+
+fn main() : void {
+    return;
+}

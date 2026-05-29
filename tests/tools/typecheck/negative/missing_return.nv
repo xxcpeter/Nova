@@ -1,0 +1,9 @@
+fn bad(x: bool) : int {
+    if (x) {
+        return 1;
+    }
+}
+
+fn main() : void {
+    return;
+}

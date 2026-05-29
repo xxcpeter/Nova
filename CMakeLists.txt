@@ -734,3 +734,12 @@ add_nova_codegen_tool_test(vec_str_basic)
 add_nova_codegen_tool_test(vec_str_param)
 add_nova_codegen_tool_test(vec_struct_param)
 add_nova_codegen_tool_test(vec_shadowing)
+
+# step 22
+add_codegen_positive_test(string_plus)
+add_nova_typecheck_positive_test(string_plus)
+add_nova_codegen_tool_test(string_plus)
+
+add_nova_typecheck_positive_test(noreturn_error_call)
+add_nova_typecheck_positive_test(noreturn_if_else)
+add_nova_typecheck_negative_test(missing_return)

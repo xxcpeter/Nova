@@ -391,7 +391,11 @@ std::string CCodeGenerator::gen_assign_expr(const AssignExpr& expr) {
 std::string CCodeGenerator::gen_binary_expr(const BinaryExpr& expr) {
     std::string op_code;
     switch (expr.op) {
-        case BinaryOp::Add: op_code = "+"; break;
+        case BinaryOp::Add: 
+            if (expr.resolved_type && expr.resolved_type->kind == TypeKind::Str) {
+                return "str_concat(" + gen_expr(*expr.left) + ", " + gen_expr(*expr.right) + ")";
+            }
+            op_code = "+"; break;
         case BinaryOp::Sub: op_code = "-"; break;
         case BinaryOp::Mul: op_code = "*"; break;
         case BinaryOp::Div: op_code = "/"; break;

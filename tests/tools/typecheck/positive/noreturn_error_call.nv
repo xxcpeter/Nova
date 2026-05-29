@@ -1,0 +1,7 @@
+fn fail() : str {
+    nova_runtime_error("failed");
+}
+
+fn main() : void {
+    return;
+}

@@ -1,0 +1,6 @@
+fn main() : void {
+    let a : str = "hello";
+    let b : str = " world";
+    print_str(a + b);
+    return;
+}

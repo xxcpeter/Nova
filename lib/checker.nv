@@ -682,7 +682,14 @@ fn infer_expr_type_impl(expr: ParseNode, symbols: SymbolTables, stack: ScopeStac
     } else if (expr.kind == ParseNodeKind.BinaryExpr) {
         let left_type : str = infer_expr_type(vec_get(expr.children, 0), symbols, stack);
         let right_type : str = infer_expr_type(vec_get(expr.children, 1), symbols, stack);
-        if (str_eq(expr.name, "+") || str_eq(expr.name, "-") || str_eq(expr.name, "*") || str_eq(expr.name, "/") || str_eq(expr.name, "%")) {
+        if (str_eq(expr.name, "+")) {
+            if (str_eq(left_type, "int") && str_eq(right_type, "int")) {
+                return "int";
+            } else if (str_eq(left_type, "str") && str_eq(right_type, "str")) {
+                return "str";
+            }
+            checker_error_at(expr.line, expr.column, "binary operator '" + expr.name + "' requires 'int' or 'str' operands");
+        } else if (str_eq(expr.name, "-") || str_eq(expr.name, "*") || str_eq(expr.name, "/") || str_eq(expr.name, "%")) {
             if (!str_eq(left_type, "int") || !str_eq(right_type, "int")) {
                 checker_error_at(expr.line, expr.column, str_concat("binary operator '", str_concat(expr.name, "' requires 'int' operands")));
             }
@@ -808,66 +815,126 @@ fn infer_expr_type_expected(expr: ParseNode, symbols: SymbolTables, stack: Scope
     return actual_type;
 }
 
+fn is_no_return_call_name(name: str) : bool {
+    return str_eq(name, "nova_runtime_error") || 
+           str_eq(name, "parser_error") ||
+           str_eq(name, "parser_error_at") ||
+           str_eq(name, "checker_error") ||
+           str_eq(name, "checker_error_at") ||
+           str_eq(name, "codegen_error") ||
+           str_eq(name, "codegen_error_at") ||
+           str_eq(name, "import_error");
+}
+
+fn expr_is_no_return_call(expr: ParseNode) : bool {
+    if (expr.kind == ParseNodeKind.CallExpr) {
+        return is_no_return_call_name(expr.name);
+    }
+    return false;
+}
+
+fn block_always_exits(block: ParseNode) : bool {
+    if (block.kind != ParseNodeKind.BlockStmt) {
+        checker_error_at(block.line, block.column, "expected block statement");
+    }
+    let i : int = 0;
+    while (i < vec_len(block.children)) {
+        let stmt : ParseNode = vec_get(block.children, i);
+        if (stmt_always_exits(stmt)) {
+            return true;
+        }
+        i = i + 1;
+    }
+    return false;
+}
+
+fn stmt_always_exits(stmt: ParseNode) : bool {
+    if (stmt.kind == ParseNodeKind.ReturnStmt) {
+        return true;
+    } else if (stmt.kind == ParseNodeKind.ThenBranch || stmt.kind == ParseNodeKind.ElseBranch) {
+        if (vec_len(stmt.children) == 0) {
+            return false;
+        }
+        return stmt_always_exits(vec_get(stmt.children, 0));
+    } else if (stmt.kind == ParseNodeKind.ExprStmt) {
+        let expr : ParseNode = vec_get(stmt.children, 0);
+        return expr_is_no_return_call(expr);
+    } else if (stmt.kind == ParseNodeKind.BlockStmt) {
+        return block_always_exits(stmt);
+    } else if (stmt.kind == ParseNodeKind.IfStmt) {
+        if (vec_len(stmt.children) < 3) {
+            return false;
+        }
+        let then_branch : ParseNode = vec_get(stmt.children, 1);
+        let else_branch : ParseNode = vec_get(stmt.children, 2);
+        return stmt_always_exits(then_branch) && stmt_always_exits(else_branch);
+    } else if (stmt.kind == ParseNodeKind.WhileStmt) {
+        // For simplicity, we assume while loops may not always exit
+        return false;
+    }
+    return false;
+}
+
+fn check_stmt_type(stmt: ParseNode, symbols: SymbolTables, stack: ScopeStack, return_type: str) : ScopeStack {
+    if (stmt.kind == ParseNodeKind.BlockStmt) {
+        stack = push_scope(stack);
+        stack = check_block_type(stmt, symbols, stack, return_type);
+        stack = pop_scope(stack);
+    } else if (stmt.kind == ParseNodeKind.LetStmt) {
+        check_type_exists(stmt.value, symbols, "variable declaration", stmt.line, stmt.column);
+        check_non_void_type(stmt.value, symbols, "variable declaration", stmt.line, stmt.column);
+        
+        if (vec_len(stmt.children) != 1) {
+            checker_error_at(stmt.line, stmt.column, "variable declaration requires initializer");
+        }
+        
+        let init_expr : ParseNode = vec_get(stmt.children, 0);
+        let init_type : str = infer_expr_type_expected(init_expr, symbols, stack, stmt.value, "variable declaration");
+        stack = declare_var(stack, stmt.name, stmt.value, stmt.line, stmt.column);
+    } else if (stmt.kind == ParseNodeKind.IfStmt) {
+        let condition : ParseNode = vec_get(stmt.children, 0);
+        let cond_type : str = infer_expr_type_expected(vec_get(condition.children, 0), symbols, stack, "bool", "if condition");
+        
+        let then_branch : ParseNode = vec_get(stmt.children, 1);
+        stack = check_stmt_type(then_branch, symbols, stack, return_type);
+
+        if (vec_len(stmt.children) > 2) {
+            let else_branch : ParseNode = vec_get(stmt.children, 2);
+            stack = check_stmt_type(else_branch, symbols, stack, return_type);
+        }
+    } else if (stmt.kind == ParseNodeKind.WhileStmt) {
+        let condition : ParseNode = vec_get(stmt.children, 0);
+        let body : ParseNode = vec_get(stmt.children, 1);
+
+        let cond_type : str = infer_expr_type_expected(vec_get(condition.children, 0), symbols, stack, "bool", "while condition");
+        
+        stack = push_scope(stack);
+        stack = check_block_type(body, symbols, stack, return_type);
+        stack = pop_scope(stack);
+    } else if (stmt.kind == ParseNodeKind.ReturnStmt) {
+        if (str_eq(return_type, "void")) {
+            if (vec_len(stmt.children) > 0) {
+                checker_error_at(stmt.line, stmt.column, "return statement in void function cannot return a value");
+            }
+        } else {
+            if (vec_len(stmt.children) == 0) {
+                checker_error_at(stmt.line, stmt.column, str_concat("missing return value in return statement, expected type '", str_concat(return_type, "'")));
+            } else {
+                let return_expr : ParseNode = vec_get(stmt.children, 0);
+                let return_expr_type : str = infer_expr_type_expected(return_expr, symbols, stack, return_type, "return statement");
+            }
+        }
+    } else if (stmt.kind == ParseNodeKind.ExprStmt) {
+        infer_expr_type(vec_get(stmt.children, 0), symbols, stack);
+    }
+    return stack;
+}
+
 fn check_block_type(node: ParseNode, symbols: SymbolTables, stack: ScopeStack, return_type: str) : ScopeStack {
     let i : int = 0;
     while (i < vec_len(node.children)) {
         let stmt : ParseNode = vec_get(node.children, i);
-        if (stmt.kind == ParseNodeKind.BlockStmt) {
-            stack = push_scope(stack);
-            stack = check_block_type(stmt, symbols, stack, return_type);
-            stack = pop_scope(stack);
-        } else if (stmt.kind == ParseNodeKind.LetStmt) {
-            check_type_exists(stmt.value, symbols, "variable declaration", stmt.line, stmt.column);
-            check_non_void_type(stmt.value, symbols, "variable declaration", stmt.line, stmt.column);
-            
-            if (vec_len(stmt.children) != 1) {
-                checker_error_at(stmt.line, stmt.column, "variable declaration requires initializer");
-            }
-            
-            let init_expr : ParseNode = vec_get(stmt.children, 0);
-            let init_type : str = infer_expr_type_expected(init_expr, symbols, stack, stmt.value, "variable declaration");
-            stack = declare_var(stack, stmt.name, stmt.value, stmt.line, stmt.column);
-        } else if (stmt.kind == ParseNodeKind.IfStmt) {
-            let condition : ParseNode = vec_get(stmt.children, 0);
-            let then_branch : ParseNode = vec_get(stmt.children, 1);
-
-            let cond_type : str = infer_expr_type_expected(vec_get(condition.children, 0), symbols, stack, "bool", "if condition");
-            
-            stack = push_scope(stack);
-            stack = check_block_type(vec_get(then_branch.children, 0), symbols, stack, return_type);
-            stack = pop_scope(stack);
-
-            if (vec_len(stmt.children) > 2) {
-                let else_branch : ParseNode = vec_get(stmt.children, 2);
-                stack = push_scope(stack);
-                stack = check_block_type(vec_get(else_branch.children, 0), symbols, stack, return_type);
-                stack = pop_scope(stack);
-            }
-        } else if (stmt.kind == ParseNodeKind.WhileStmt) {
-            let condition : ParseNode = vec_get(stmt.children, 0);
-            let body : ParseNode = vec_get(stmt.children, 1);
-
-            let cond_type : str = infer_expr_type_expected(vec_get(condition.children, 0), symbols, stack, "bool", "while condition");
-            
-            stack = push_scope(stack);
-            stack = check_block_type(body, symbols, stack, return_type);
-            stack = pop_scope(stack);
-        } else if (stmt.kind == ParseNodeKind.ReturnStmt) {
-            if (str_eq(return_type, "void")) {
-                if (vec_len(stmt.children) > 0) {
-                    checker_error_at(stmt.line, stmt.column, "return statement in void function cannot return a value");
-                }
-            } else {
-                if (vec_len(stmt.children) == 0) {
-                    checker_error_at(stmt.line, stmt.column, str_concat("missing return value in return statement, expected type '", str_concat(return_type, "'")));
-                } else {
-                    let return_expr : ParseNode = vec_get(stmt.children, 0);
-                    let return_expr_type : str = infer_expr_type_expected(return_expr, symbols, stack, return_type, "return statement");
-                }
-            }
-        } else if (stmt.kind == ParseNodeKind.ExprStmt) {
-            infer_expr_type(vec_get(stmt.children, 0), symbols, stack);
-        }
+        stack = check_stmt_type(stmt, symbols, stack, return_type);
         i = i + 1;
     }
     return stack;
@@ -883,6 +950,9 @@ fn check_function_body(node: ParseNode, symbols: SymbolTables) : void {
             scope_stack = declare_var(scope_stack, child.name, child.value, child.line, child.column);
         } else if (child.kind == ParseNodeKind.BlockStmt) {
             scope_stack = check_block_type(child, symbols, scope_stack, node.value);
+            if (!block_always_exits(child) && !str_eq(node.value, "void")) {
+                checker_error_at(node.line, node.column, "missing return statement in function '" + node.name + "'");
+            }
         }
         i = i + 1;
     }

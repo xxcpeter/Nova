@@ -384,6 +384,15 @@ void SemanticAnalyzer::visit(const BinaryExpr& expr) {
 
     switch (expr.op) {
         case BinaryOp::Add:
+            if (left_type == Type{ TypeKind::Str } && right_type == Type{ TypeKind::Str }) {
+                last_type_ = Type{ TypeKind::Str };
+                return;
+            }
+            if (left_type == Type{ TypeKind::Int } && right_type == Type{ TypeKind::Int }) {
+                last_type_ = Type{ TypeKind::Int };
+                return;
+            }
+            throw SemaError("operator '+' requires both int or both str", expr.location);
         case BinaryOp::Sub:
         case BinaryOp::Mul:
         case BinaryOp::Div:
