@@ -1,1 +1,1 @@
-CheckerError at 1:10: 'void' type cannot be used in function parameter type
+tests/tools/checker/negative/void_param.nv:1:10: CheckerError: 'void' type cannot be used in function parameter type

@@ -1,1 +1,1 @@
-SemanticError at 2:19: undefined variable or enum 'y'
+tests/sema/negative/undefined_variable.nv:2:19: SemanticError: undefined variable or enum 'y'

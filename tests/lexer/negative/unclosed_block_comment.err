@@ -1,1 +1,1 @@
-LexError at 1:1: Unterminated block comment
+tests/lexer/negative/unclosed_block_comment.nv:1:1: LexError: Unterminated block comment

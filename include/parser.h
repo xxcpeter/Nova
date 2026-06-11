@@ -4,6 +4,7 @@
 #include "token.h"
 #include <vector>
 #include <format>
+#include <cstddef>
 #include <stdexcept>
 #include <string_view>
 
@@ -65,6 +66,6 @@ private:
 class ParseError : public std::runtime_error {
 public:
     ParseError(const std::string& message, const SourceLocation& location) : 
-        std::runtime_error(std::format("ParseError at {}:{}: {}", 
-            location.line, location.column, message)) {}
+        std::runtime_error(std::format("{}:{}:{}: ParseError: {}", 
+            location.file, location.line, location.column, message)) {}
 };

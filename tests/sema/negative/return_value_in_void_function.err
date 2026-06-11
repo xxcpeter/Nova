@@ -1,1 +1,1 @@
-SemanticError at 2:5: void function main should not return a value
+tests/sema/negative/return_value_in_void_function.nv:2:5: SemanticError: void function main should not return a value

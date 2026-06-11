@@ -65,6 +65,7 @@ enum class TokenType {
 
 
 struct SourceLocation {
+    std::string file;
     size_t line = 1;
     size_t column = 1;
 };
@@ -73,7 +74,6 @@ struct SourceLocation {
 struct Token {
     TokenType type;
     std::string lexeme;
-    // std::string file_name;
     SourceLocation location;
 };
 

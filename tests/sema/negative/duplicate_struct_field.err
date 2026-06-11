@@ -1,1 +1,1 @@
-SemanticError at 3:5: duplicate field 'x' in struct 'Point'
+tests/sema/negative/duplicate_struct_field.nv:3:5: SemanticError: duplicate field 'x' in struct 'Point'

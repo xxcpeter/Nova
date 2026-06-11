@@ -1,1 +1,1 @@
-CheckerError at 3:9: type error in assignment expression: expected 'int', got 'str'
+tests/tools/typecheck/negative/assignment_type_mismatch.nv:3:9: CheckerError: type error in assignment expression: expected 'int', got 'str'

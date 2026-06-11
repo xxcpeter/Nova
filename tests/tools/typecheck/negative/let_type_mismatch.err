@@ -1,1 +1,1 @@
-CheckerError at 2:19: type error in variable declaration: expected 'int', got 'str'
+tests/tools/typecheck/negative/let_type_mismatch.nv:2:19: CheckerError: type error in variable declaration: expected 'int', got 'str'

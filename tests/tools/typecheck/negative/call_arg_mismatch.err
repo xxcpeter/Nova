@@ -1,1 +1,1 @@
-CheckerError at 6:7: type error in function call argument: expected 'int', got 'str'
+tests/tools/typecheck/negative/call_arg_mismatch.nv:6:7: CheckerError: type error in function call argument: expected 'int', got 'str'

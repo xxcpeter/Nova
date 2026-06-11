@@ -1,1 +1,1 @@
-CheckerError at 2:12: type error in return statement: expected 'int', got 'str'
+tests/tools/typecheck/negative/return_type_mismatch.nv:2:12: CheckerError: type error in return statement: expected 'int', got 'str'

@@ -1,1 +1,1 @@
-SemanticError at 3:9: duplicate variable 'x'
+tests/sema/negative/duplicate_variable_same_scope.nv:3:9: SemanticError: duplicate variable 'x'

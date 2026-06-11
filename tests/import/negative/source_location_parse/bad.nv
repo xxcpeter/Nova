@@ -1,0 +1,3 @@
+fn bad() : void {
+    let x : int = ;
+}

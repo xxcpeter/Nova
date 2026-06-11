@@ -52,12 +52,13 @@ enum TokenKind {
 struct Token {
     kind: TokenKind;
     lexeme: str;
+    file: str;
     line: int;
     column: int;
 }
 
-fn make_token(kind: TokenKind, lexeme: str, line: int, column: int) : Token {
-    return Token{ kind : kind , lexeme : lexeme , line : line , column : column };
+fn make_token(kind: TokenKind, lexeme: str, file: str, line: int, column: int) : Token {
+    return Token{ kind : kind , lexeme : lexeme , file : file , line : line , column : column };
 }
 
 fn token_kind_name(kind: TokenKind) : str {

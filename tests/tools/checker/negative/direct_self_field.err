@@ -1,1 +1,1 @@
-CheckerError at 2:5: struct 'Node' cannot contain field 'next' of its own type
+tests/tools/checker/negative/direct_self_field.nv:2:5: CheckerError: struct 'Node' cannot contain field 'next' of its own type

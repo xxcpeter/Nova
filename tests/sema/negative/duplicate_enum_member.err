@@ -1,1 +1,1 @@
-SemanticError at 3:5: duplicate member 'Red' in enum 'Color'
+tests/sema/negative/duplicate_enum_member.nv:3:5: SemanticError: duplicate member 'Red' in enum 'Color'

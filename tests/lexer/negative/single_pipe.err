@@ -1,1 +1,1 @@
-LexError at 1:1: Unexpected operator '|'
+tests/lexer/negative/single_pipe.nv:1:1: LexError: Unexpected operator '|'

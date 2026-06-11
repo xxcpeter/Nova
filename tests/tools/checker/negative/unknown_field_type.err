@@ -1,1 +1,1 @@
-CheckerError at 2:5: unknown type 'Missing' in struct field declaration
+tests/tools/checker/negative/unknown_field_type.nv:2:5: CheckerError: unknown type 'Missing' in struct field declaration

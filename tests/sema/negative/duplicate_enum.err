@@ -1,1 +1,1 @@
-SemanticError at 5:1: duplicate enum 'Color'
+tests/sema/negative/duplicate_enum.nv:5:1: SemanticError: duplicate enum 'Color'

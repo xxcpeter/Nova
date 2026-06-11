@@ -1,1 +1,1 @@
-LexError at 1:1: Unterminated string
+tests/lexer/negative/unclosed_string.nv:1:1: LexError: Unterminated string

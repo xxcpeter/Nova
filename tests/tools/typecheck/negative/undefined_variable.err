@@ -1,1 +1,1 @@
-CheckerError at 2:15: undefined variable 'x'
+tests/tools/typecheck/negative/undefined_variable.nv:2:15: CheckerError: undefined variable 'x'

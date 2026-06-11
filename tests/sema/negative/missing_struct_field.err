@@ -1,1 +1,1 @@
-SemanticError at 7:21: missing field 'y' in struct literal 'Point'
+tests/sema/negative/missing_struct_field.nv:7:21: SemanticError: missing field 'y' in struct literal 'Point'

@@ -1,1 +1,1 @@
-SemanticError at 2:12: type error in return statement: expected int, got bool
+tests/sema/negative/return_type_mismatch.nv:2:12: SemanticError: type error in return statement: expected int, got bool

@@ -1,1 +1,1 @@
-SemanticError at 2:12: type error in while condition: expected bool, got int
+tests/sema/negative/while_condition_not_bool.nv:2:12: SemanticError: type error in while condition: expected bool, got int

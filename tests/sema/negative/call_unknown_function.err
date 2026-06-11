@@ -1,1 +1,1 @@
-SemanticError at 2:5: undefined function 'foo'
+tests/sema/negative/call_unknown_function.nv:2:5: SemanticError: undefined function 'foo'

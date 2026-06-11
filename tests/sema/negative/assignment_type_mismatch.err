@@ -1,1 +1,1 @@
-SemanticError at 3:9: type error in assignment: expected int, got bool
+tests/sema/negative/assignment_type_mismatch.nv:3:9: SemanticError: type error in assignment: expected int, got bool

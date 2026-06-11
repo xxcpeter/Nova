@@ -1,1 +1,1 @@
-LexError at 1:2: Invalid number literal
+tests/lexer/negative/invalid_number_alpha.nv:1:2: LexError: Invalid number literal

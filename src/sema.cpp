@@ -88,35 +88,35 @@ void SemanticAnalyzer::collect_function_signatures(const Program& program) {
 
 
 void SemanticAnalyzer::install_builtin_functions() {
-    functions_.emplace("print_int", FunctionSignature{"print_int", {Type{ TypeKind::Int }}, Type{ TypeKind::Void }, SourceLocation{0, 0}});
+    functions_.emplace("print_int", FunctionSignature{"print_int", {Type{ TypeKind::Int }}, Type{ TypeKind::Void }, SourceLocation{"<builtin>", 0, 0}});
     
-    functions_.emplace("print_str", FunctionSignature{"print_str", {Type{ TypeKind::Str }}, Type{ TypeKind::Void }, SourceLocation{0, 0}});
-    functions_.emplace("str_eq", FunctionSignature{"str_eq", {Type{ TypeKind::Str }, Type{ TypeKind::Str }}, Type{ TypeKind::Bool }, SourceLocation{0, 0}});
-    functions_.emplace("str_concat", FunctionSignature{"str_concat", {Type{ TypeKind::Str }, Type{ TypeKind::Str }}, Type{ TypeKind::Str }, SourceLocation{0, 0}});
-    functions_.emplace("str_len", FunctionSignature{"str_len", {Type{ TypeKind::Str }}, Type{ TypeKind::Int }, SourceLocation{0, 0}});
-    functions_.emplace("str_get", FunctionSignature{"str_get", {Type{ TypeKind::Str }, Type{ TypeKind::Int }}, Type{ TypeKind::Int }, SourceLocation{0, 0}});
-    functions_.emplace("str_slice", FunctionSignature{"str_slice", {Type{ TypeKind::Str }, Type{ TypeKind::Int }, Type{ TypeKind::Int }}, Type{ TypeKind::Str }, SourceLocation{0, 0}});
-    functions_.emplace("str_starts_with", FunctionSignature{"str_starts_with", {Type{ TypeKind::Str }, Type{ TypeKind::Str }}, Type{ TypeKind::Bool }, SourceLocation{0, 0}});
-    functions_.emplace("str_contains", FunctionSignature{"str_contains", {Type{ TypeKind::Str }, Type{ TypeKind::Str }}, Type{ TypeKind::Bool }, SourceLocation{0, 0}});
-    functions_.emplace("int_to_str", FunctionSignature{"int_to_str", {Type{ TypeKind::Int }}, Type{ TypeKind::Str }, SourceLocation{0, 0}});
+    functions_.emplace("print_str", FunctionSignature{"print_str", {Type{ TypeKind::Str }}, Type{ TypeKind::Void }, SourceLocation{"<builtin>", 0, 0}});
+    functions_.emplace("str_eq", FunctionSignature{"str_eq", {Type{ TypeKind::Str }, Type{ TypeKind::Str }}, Type{ TypeKind::Bool }, SourceLocation{"<builtin>", 0, 0}});
+    functions_.emplace("str_concat", FunctionSignature{"str_concat", {Type{ TypeKind::Str }, Type{ TypeKind::Str }}, Type{ TypeKind::Str }, SourceLocation{"<builtin>", 0, 0}});
+    functions_.emplace("str_len", FunctionSignature{"str_len", {Type{ TypeKind::Str }}, Type{ TypeKind::Int }, SourceLocation{"<builtin>", 0, 0}});
+    functions_.emplace("str_get", FunctionSignature{"str_get", {Type{ TypeKind::Str }, Type{ TypeKind::Int }}, Type{ TypeKind::Int }, SourceLocation{"<builtin>", 0, 0}});
+    functions_.emplace("str_slice", FunctionSignature{"str_slice", {Type{ TypeKind::Str }, Type{ TypeKind::Int }, Type{ TypeKind::Int }}, Type{ TypeKind::Str }, SourceLocation{"<builtin>", 0, 0}});
+    functions_.emplace("str_starts_with", FunctionSignature{"str_starts_with", {Type{ TypeKind::Str }, Type{ TypeKind::Str }}, Type{ TypeKind::Bool }, SourceLocation{"<builtin>", 0, 0}});
+    functions_.emplace("str_contains", FunctionSignature{"str_contains", {Type{ TypeKind::Str }, Type{ TypeKind::Str }}, Type{ TypeKind::Bool }, SourceLocation{"<builtin>", 0, 0}});
+    functions_.emplace("int_to_str", FunctionSignature{"int_to_str", {Type{ TypeKind::Int }}, Type{ TypeKind::Str }, SourceLocation{"<builtin>", 0, 0}});
 
-    functions_.emplace("read_file", FunctionSignature{"read_file", {Type{ TypeKind::Str }}, Type{ TypeKind::Str }, SourceLocation{0, 0}});
-    functions_.emplace("write_file", FunctionSignature{"write_file", {Type{ TypeKind::Str }, Type{ TypeKind::Str }}, Type{ TypeKind::Void }, SourceLocation{0, 0}});
+    functions_.emplace("read_file", FunctionSignature{"read_file", {Type{ TypeKind::Str }}, Type{ TypeKind::Str }, SourceLocation{"<builtin>", 0, 0}});
+    functions_.emplace("write_file", FunctionSignature{"write_file", {Type{ TypeKind::Str }, Type{ TypeKind::Str }}, Type{ TypeKind::Void }, SourceLocation{"<builtin>", 0, 0}});
 
-    functions_.emplace("buf_new", FunctionSignature{"buf_new", {}, Type{ TypeKind::Int }, SourceLocation{0, 0}});
-    functions_.emplace("buf_push_str", FunctionSignature{"buf_push_str", {Type{ TypeKind::Int }, Type{ TypeKind::Str }}, Type{ TypeKind::Void }, SourceLocation{0, 0}});
-    functions_.emplace("buf_push_int", FunctionSignature{"buf_push_int", {Type{ TypeKind::Int }, Type{ TypeKind::Int }}, Type{ TypeKind::Void }, SourceLocation{0, 0}});
-    functions_.emplace("buf_to_str", FunctionSignature{"buf_to_str", {Type{ TypeKind::Int }}, Type{ TypeKind::Str }, SourceLocation{0, 0}});
+    functions_.emplace("buf_new", FunctionSignature{"buf_new", {}, Type{ TypeKind::Int }, SourceLocation{"<builtin>", 0, 0}});
+    functions_.emplace("buf_push_str", FunctionSignature{"buf_push_str", {Type{ TypeKind::Int }, Type{ TypeKind::Str }}, Type{ TypeKind::Void }, SourceLocation{"<builtin>", 0, 0}});
+    functions_.emplace("buf_push_int", FunctionSignature{"buf_push_int", {Type{ TypeKind::Int }, Type{ TypeKind::Int }}, Type{ TypeKind::Void }, SourceLocation{"<builtin>", 0, 0}});
+    functions_.emplace("buf_to_str", FunctionSignature{"buf_to_str", {Type{ TypeKind::Int }}, Type{ TypeKind::Str }, SourceLocation{"<builtin>", 0, 0}});
 
-    functions_.emplace("str_vec_new", FunctionSignature{"str_vec_new", {}, Type{ TypeKind::Int }, SourceLocation{0, 0}});
-    functions_.emplace("str_vec_push", FunctionSignature{"str_vec_push", {Type{ TypeKind::Int }, Type{ TypeKind::Str }}, Type{ TypeKind::Void }, SourceLocation{0, 0}});
-    functions_.emplace("str_vec_get", FunctionSignature{"str_vec_get", {Type{ TypeKind::Int }, Type{ TypeKind::Int }}, Type{ TypeKind::Str }, SourceLocation{0, 0}});
-    functions_.emplace("str_vec_len", FunctionSignature{"str_vec_len", {Type{ TypeKind::Int }}, Type{ TypeKind::Int }, SourceLocation{0, 0}});
+    functions_.emplace("str_vec_new", FunctionSignature{"str_vec_new", {}, Type{ TypeKind::Int }, SourceLocation{"<builtin>", 0, 0}});
+    functions_.emplace("str_vec_push", FunctionSignature{"str_vec_push", {Type{ TypeKind::Int }, Type{ TypeKind::Str }}, Type{ TypeKind::Void }, SourceLocation{"<builtin>", 0, 0}});
+    functions_.emplace("str_vec_get", FunctionSignature{"str_vec_get", {Type{ TypeKind::Int }, Type{ TypeKind::Int }}, Type{ TypeKind::Str }, SourceLocation{"<builtin>", 0, 0}});
+    functions_.emplace("str_vec_len", FunctionSignature{"str_vec_len", {Type{ TypeKind::Int }}, Type{ TypeKind::Int }, SourceLocation{"<builtin>", 0, 0}});
 
-    functions_.emplace("arg_count", FunctionSignature{"arg_count", {}, Type{ TypeKind::Int }, SourceLocation{0, 0}});
-    functions_.emplace("arg_get", FunctionSignature{"arg_get", {Type{ TypeKind::Int }}, Type{ TypeKind::Str }, SourceLocation{0, 0}});
+    functions_.emplace("arg_count", FunctionSignature{"arg_count", {}, Type{ TypeKind::Int }, SourceLocation{"<builtin>", 0, 0}});
+    functions_.emplace("arg_get", FunctionSignature{"arg_get", {Type{ TypeKind::Int }}, Type{ TypeKind::Str }, SourceLocation{"<builtin>", 0, 0}});
 
-    functions_.emplace("nova_runtime_error", FunctionSignature{"nova_runtime_error", {Type{ TypeKind::Str }}, Type{ TypeKind::Void }, SourceLocation{0, 0}});
+    functions_.emplace("nova_runtime_error", FunctionSignature{"nova_runtime_error", {Type{ TypeKind::Str }}, Type{ TypeKind::Void }, SourceLocation{"<builtin>", 0, 0}});
 }
 
 

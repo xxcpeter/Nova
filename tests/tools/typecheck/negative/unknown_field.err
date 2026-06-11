@@ -1,1 +1,1 @@
-CheckerError at 7:17: unknown field 'y' in struct 'Point'
+tests/tools/typecheck/negative/unknown_field.nv:7:17: CheckerError: unknown field 'y' in struct 'Point'

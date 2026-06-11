@@ -1,1 +1,1 @@
-SemanticError at 5:1: duplicate struct 'Point'
+tests/sema/negative/duplicate_struct.nv:5:1: SemanticError: duplicate struct 'Point'

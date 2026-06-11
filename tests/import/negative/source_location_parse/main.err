@@ -1,0 +1,1 @@
+tests/import/negative/source_location_parse/bad.nv:2:19: ParseError: expected expression after '='

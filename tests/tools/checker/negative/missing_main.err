@@ -1,1 +1,1 @@
-CheckerError: missing main function
+tests/tools/checker/negative/missing_main.nv:1:1: CheckerError: missing main function

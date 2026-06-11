@@ -1,1 +1,1 @@
-CheckerError: duplicate parameter 'x' in function 'main'
+tests/tools/checker/negative/duplicate_param.nv:1:18: CheckerError: duplicate parameter 'x' in function 'main'

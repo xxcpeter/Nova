@@ -1,1 +1,1 @@
-CheckerError at 1:1: 'main' function must return 'void'
+tests/tools/checker/negative/invalid_main_return.nv:1:1: CheckerError: 'main' function must return 'void'

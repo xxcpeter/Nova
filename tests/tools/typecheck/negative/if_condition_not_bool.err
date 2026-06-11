@@ -1,1 +1,1 @@
-CheckerError at 2:9: type error in if condition: expected 'bool', got 'int'
+tests/tools/typecheck/negative/if_condition_not_bool.nv:2:9: CheckerError: type error in if condition: expected 'bool', got 'int'

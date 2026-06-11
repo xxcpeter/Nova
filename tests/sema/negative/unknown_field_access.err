@@ -1,1 +1,1 @@
-SemanticError at 7:17: unknown field 'y' in struct 'Point'
+tests/sema/negative/unknown_field_access.nv:7:17: SemanticError: unknown field 'y' in struct 'Point'

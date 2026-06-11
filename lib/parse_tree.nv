@@ -35,13 +35,14 @@ struct ParseNode {
     name: str;
     value: str;
     children: vec<ParseNode>;
+    file: str;
     line: int;
     column: int;
 }
 
-fn make_node(kind: ParseNodeKind, name: str, value: str, line: int, column: int) : ParseNode {
+fn make_node(kind: ParseNodeKind, name: str, value: str, file: str, line: int, column: int) : ParseNode {
     let children : vec<ParseNode> = vec_new();
-    return ParseNode { kind: kind, name: name, value: value, children: children, line: line, column: column };
+    return ParseNode { kind: kind, name: name, value: value, children: children, file: file, line: line, column: column };
 }
 
 fn add_child(parent: ParseNode, child: ParseNode) : ParseNode {
@@ -68,21 +69,21 @@ fn parse_node_header(node: ParseNode) : str {
     if (node.kind == ParseNodeKind.Program) {
         return "Program";
     } else if (node.kind == ParseNodeKind.StructDecl) {
-        return str_concat("Struct name=", node.name);
+        return "Struct name=" + node.name;
     } else if (node.kind == ParseNodeKind.EnumDecl) {
-        return str_concat("Enum name=", node.name);
+        return "Enum name=" + node.name;
     } else if (node.kind == ParseNodeKind.FieldDecl) {
-        return str_concat("Field name=", str_concat(node.name, str_concat(" type=", node.value)));
+        return "Field name=" + node.name + " type=" + node.value;
     } else if (node.kind == ParseNodeKind.EnumMember) {
-        return str_concat("Member name=", node.name);
+        return "Member name=" + node.name;
     } else if (node.kind == ParseNodeKind.FunctionDecl) {
-        return str_concat("Function name=", str_concat(node.name, str_concat(" return=", node.value)));
+        return "Function name=" + node.name + " return=" + node.value;
     } else if (node.kind == ParseNodeKind.ParamDecl) {
-        return str_concat("Param name=", str_concat(node.name, str_concat(" type=", node.value)));
+        return "Param name=" + node.name + " type=" + node.value;
     } else if (node.kind == ParseNodeKind.BlockStmt) {
         return "Block";
     } else if (node.kind == ParseNodeKind.LetStmt) {
-        return str_concat("LetStmt name=", str_concat(node.name, str_concat(" type=", node.value)));
+        return "LetStmt name=" + node.name + " type=" + node.value;
     } else if (node.kind == ParseNodeKind.ReturnStmt) {
         return "ReturnStmt";
     } else if (node.kind == ParseNodeKind.IfStmt) {
@@ -98,25 +99,25 @@ fn parse_node_header(node: ParseNode) : str {
     } else if (node.kind == ParseNodeKind.AssignExpr) {
         return "AssignExpr";
     } else if (node.kind == ParseNodeKind.BinaryExpr) {
-        return str_concat("BinaryExpr op=", node.name);
+        return "BinaryExpr op=" + node.name;
     } else if (node.kind == ParseNodeKind.UnaryExpr) {
-        return str_concat("UnaryExpr op=", node.name);
+        return "UnaryExpr op=" + node.name;
     } else if (node.kind == ParseNodeKind.CallExpr) {
-        return str_concat("CallExpr name=", node.name);
+        return "CallExpr name=" + node.name;
     } else if (node.kind == ParseNodeKind.FieldAccessExpr) {
-        return str_concat("FieldAccessExpr name=", node.name);
+        return "FieldAccessExpr name=" + node.name;
     } else if (node.kind == ParseNodeKind.StructLiteralExpr) {
-        return str_concat("StructLiteralExpr name=", node.name);
+        return "StructLiteralExpr name=" + node.name;
     } else if (node.kind == ParseNodeKind.StructFieldInitExpr) {
-        return str_concat("FieldInit name=", node.name);
+        return "FieldInit name=" + node.name;
     } else if (node.kind == ParseNodeKind.IdentifierExpr) {
-        return str_concat("IdentifierExpr name=", node.name);
+        return "IdentifierExpr name=" + node.name;
     } else if (node.kind == ParseNodeKind.IntLiteralExpr) {
-        return str_concat("IntLiteralExpr value=", node.value);
+        return "IntLiteralExpr value=" + node.value;
     } else if (node.kind == ParseNodeKind.StrLiteralExpr) {
-        return str_concat("StrLiteralExpr value=", node.value);
+        return "StrLiteralExpr value=" + node.value;
     } else if (node.kind == ParseNodeKind.BoolLiteralExpr) {
-        return str_concat("BoolLiteralExpr value=", node.value);
+        return "BoolLiteralExpr value=" + node.value;
     } else if (node.kind == ParseNodeKind.Condition) {
         return "Condition";
     } else{

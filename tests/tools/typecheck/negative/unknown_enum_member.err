@@ -1,1 +1,1 @@
-CheckerError at 6:27: unknown member 'Blue' in enum 'Color'
+tests/tools/typecheck/negative/unknown_enum_member.nv:6:27: CheckerError: unknown member 'Blue' in enum 'Color'

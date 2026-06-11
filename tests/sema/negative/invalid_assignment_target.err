@@ -1,1 +1,1 @@
-SemanticError at 2:5: invalid assignment target
+tests/sema/negative/invalid_assignment_target.nv:2:5: SemanticError: invalid assignment target

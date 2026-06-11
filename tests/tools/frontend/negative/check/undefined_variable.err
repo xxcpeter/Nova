@@ -1,1 +1,1 @@
-CheckerError at 2:15: undefined variable 'x'
+tests/tools/frontend/negative/check/undefined_variable.nv:2:15: CheckerError: undefined variable 'x'

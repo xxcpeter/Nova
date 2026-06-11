@@ -1,1 +1,1 @@
-ParseError at 2:11: expected ';' after return statement
+tests/parser/negative/missing_semicolon.nv:2:11: ParseError: expected ';' after return statement

@@ -1,1 +1,1 @@
-SemanticError at 2:5: non-void function f must return a value
+tests/sema/negative/empty_return_in_non_void_function.nv:2:5: SemanticError: non-void function f must return a value

@@ -1,1 +1,1 @@
-ParseError at 2:9: expected expression
+tests/parser/negative/incomplete_binary_expr.nv:2:9: ParseError: expected expression

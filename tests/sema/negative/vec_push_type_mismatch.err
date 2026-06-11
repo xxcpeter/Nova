@@ -1,1 +1,1 @@
-SemanticError at 3:18: type error in vec_push value: expected int, got str
+tests/sema/negative/vec_push_type_mismatch.nv:3:18: SemanticError: type error in vec_push value: expected int, got str

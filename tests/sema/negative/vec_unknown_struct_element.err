@@ -1,1 +1,1 @@
-SemanticError at 2:18: unknown type 'Token'
+tests/sema/negative/vec_unknown_struct_element.nv:2:18: SemanticError: unknown type 'Token'

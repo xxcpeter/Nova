@@ -1,1 +1,1 @@
-SemanticError at 2:5: cannot infer element type for vec_new
+tests/sema/negative/vec_new_without_context.nv:2:5: SemanticError: cannot infer element type for vec_new

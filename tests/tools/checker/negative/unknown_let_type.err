@@ -1,1 +1,1 @@
-CheckerError at 2:5: unknown type 'Missing' in variable declaration
+tests/tools/checker/negative/unknown_let_type.nv:2:5: CheckerError: unknown type 'Missing' in variable declaration

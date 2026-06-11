@@ -1,8 +1,10 @@
 #pragma once
 
 #include "token.h"
+#include "source_loader.h"
 #include <string>
 #include <vector>
+#include <cstddef>
 #include <stdexcept>
 #include <iosfwd>
 #include <format>
@@ -11,8 +13,8 @@
 
 class Lexer {
 public:
-    Lexer(std::string_view source, std::string_view source_name) 
-        : source_(source), source_filename_(source_name) {}
+    Lexer(const LoadedSource& source) : source_(source.content), 
+        source_filename_(source.line_mapping.empty() ? "" : source.line_mapping.front().file), line_mapping_(source.line_mapping) {}
     
     Token next_token();
     std::vector<Token> tokenize();
@@ -20,6 +22,7 @@ public:
 private:
     std::string_view source_;
     std::string_view source_filename_;
+    std::vector<SourceLineMapping> line_mapping_;
     size_t pos_ = 0;
     size_t line_ = 1;
     size_t column_ = 1;
@@ -29,6 +32,7 @@ private:
     char peek_next() const;
     char advance();
     SourceLocation current_location() const;
+    SourceLocation location_for_current_position() const;
     
     void skip_whitespace_and_comments();
     
@@ -87,6 +91,6 @@ private:
 class LexError : public std::runtime_error {
 public:
     LexError(const std::string& message, const SourceLocation& location) : 
-        std::runtime_error(std::format("LexError at {}:{}: {}", 
-            location.line, location.column, message)) {}
+        std::runtime_error(std::format("{}:{}:{}: LexError: {}", 
+            location.file, location.line, location.column, message)) {}
 };

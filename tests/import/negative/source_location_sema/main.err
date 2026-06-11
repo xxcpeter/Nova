@@ -1,0 +1,1 @@
+tests/import/negative/source_location_sema/bad.nv:2:19: SemanticError: type error in variable initializer: expected int, got str

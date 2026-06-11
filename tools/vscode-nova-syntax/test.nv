@@ -23,7 +23,7 @@ fn main() : void {
 
     if (c == Color.Red && vec_len(xs) > 0) {
         print_int(vec_get(xs, 0));
-        print_str(str_concat("color=", "red"));
+        print_str("color=" + "red");
     }
 
     return;

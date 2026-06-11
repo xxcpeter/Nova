@@ -466,6 +466,20 @@ function(add_nova_codegen_tool_test name)
     set_tests_properties(nova_tool_codegen_${name} PROPERTIES LABELS "nova_tool;codegen")
 endfunction()
 
+function(add_import_sema_negative_test name)
+    add_test(
+        NAME import_negative_sema_${name}
+        COMMAND ${CMAKE_COMMAND}
+            -DTOOL=$<TARGET_FILE:nova_sema>
+            -DINPUT=${CMAKE_CURRENT_SOURCE_DIR}/tests/import/negative/${name}/main.nv
+            -DEXPECT=${CMAKE_CURRENT_SOURCE_DIR}/tests/import/negative/${name}/main.err
+            -DMODE=negative
+            -DLABEL=stderr
+            -P ${TEXT_TEST_DRIVER}
+    )
+    set_tests_properties(import_negative_sema_${name} PROPERTIES LABELS "import;sema;negative")
+endfunction()
+
 
 # step 2
 add_lexer_positive_test(single_tokens)
@@ -743,3 +757,8 @@ add_nova_codegen_tool_test(string_plus)
 add_nova_typecheck_positive_test(noreturn_error_call)
 add_nova_typecheck_positive_test(noreturn_if_else)
 add_nova_typecheck_negative_test(missing_return)
+
+# step 23
+add_import_negative_test(source_location_parse)
+add_import_sema_negative_test(source_location_sema)
+# add_nova_frontend_import_check_test(source_location)

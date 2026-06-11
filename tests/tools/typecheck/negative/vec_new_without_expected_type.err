@@ -1,1 +1,1 @@
-CheckerError at 2:5: cannot infer type for vec_new
+tests/tools/typecheck/negative/vec_new_without_expected_type.nv:2:5: CheckerError: cannot infer type for vec_new

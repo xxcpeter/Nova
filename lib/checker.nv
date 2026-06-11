@@ -72,7 +72,7 @@ fn find_struct(symbols: SymbolTables, name: str) : StructInfo {
         i = i + 1;
     }
     // should never reach here if caller checks has_struct first
-    checker_error(str_concat("internal error: struct '", str_concat(name, "' not found in symbol table")));
+    checker_error("internal error: struct '" + name + "' not found in symbol table");
 }
 
 fn has_enum(symbols: SymbolTables, name: str) : bool {
@@ -97,7 +97,7 @@ fn find_enum(symbols: SymbolTables, name: str) : EnumInfo {
         i = i + 1;
     }
     // should never reach here if caller checks has_enum first
-    checker_error(str_concat("internal error: enum '", str_concat(name, "' not found in symbol table")));
+    checker_error("internal error: enum '" + name + "' not found in symbol table");
 }
 
 fn has_function(symbols: SymbolTables, name: str) : bool {
@@ -122,7 +122,7 @@ fn find_function(symbols: SymbolTables, name: str) : FunctionInfo {
         i = i + 1;
     }
     // should never reach here if caller checks has_function first
-    checker_error(str_concat("internal error: function '", str_concat(name, "' not found in symbol table")));
+    checker_error("internal error: function '" + name + "' not found in symbol table");
 }
 
 fn func_has_param(info: FunctionInfo, param_name: str) : bool {
@@ -159,16 +159,16 @@ fn struct_field_type(info: StructInfo, field_name: str) : str {
         i = i + 1;
     }
     // should never reach here if caller checks struct_has_field first
-    checker_error(str_concat("internal error: field '", str_concat(field_name, str_concat("' not found in struct '", str_concat(info.name, "'")))));
+    checker_error("internal error: field '" + field_name + "' not found in struct '" + info.name + "'");
 }
 
 fn enum_has_member(info: EnumInfo, member_name: str) : bool {
     return vec_str_contains(info.members, member_name);
 }
 
-fn add_unique_name(xs: vec<str>, name: str, error_message: str) : void {
+fn add_unique_name(xs: vec<str>, name: str, file: str, line: int, column: int, error_message: str) : void {
     if (vec_str_contains(xs, name)) {
-        checker_error(error_message);
+        checker_error_at(file, line, column, error_message);
     }
     vec_push(xs, name);
 }
@@ -194,21 +194,21 @@ fn is_known_type(type_name: str, symbols: SymbolTables) : bool {
     return is_builtin_type(type_name) || has_struct(symbols, type_name) || has_enum(symbols, type_name);
 }
 
-fn check_type_exists(type_name: str, symbols: SymbolTables, context: str, line: int, column: int) : void {
+fn check_type_exists(type_name: str, symbols: SymbolTables, context: str, file: str, line: int, column: int) : void {
     if (!is_known_type(type_name, symbols)) {
-        checker_error_at(line, column, str_concat("unknown type '", str_concat(str_concat(type_name, "' in "), context)));
+        checker_error_at(file, line, column, "unknown type '" + type_name + "' in " + context);
     }
 }
 
-fn check_non_void_type(type_name: str, symbols: SymbolTables, context: str, line: int, column: int) : void {
+fn check_non_void_type(type_name: str, symbols: SymbolTables, context: str, file: str, line: int, column: int) : void {
     if (str_eq(type_name, "void")) {
-        checker_error_at(line, column, str_concat("'void' type cannot be used in ", context));
+        checker_error_at(file, line, column, "'void' type cannot be used in " + context);
     }
 }
 
-fn check_keyword_name(name: str, context: str, line: int, column: int) : void {
+fn check_keyword_name(name: str, context: str, file: str, line: int, column: int) : void {
     if (is_keyword_name(name)) {
-        checker_error_at(line, column, str_concat("name '", str_concat(str_concat(name, "' cannot be a keyword in "), context)));
+        checker_error_at(file, line, column, "name '" + name + "' cannot be a keyword in " + context);
     }
 }
 
@@ -218,16 +218,16 @@ fn collect_top_level_symbols(program: ParseNode) : SymbolTables {
     while (i < vec_len(program.children)) {
         let node : ParseNode = vec_get(program.children, i);
         if (node.kind == ParseNodeKind.StructDecl) {
-            check_keyword_name(node.name, "struct declaration", node.line, node.column);
-            add_unique_name(symbols.all_names, node.name, str_concat("duplicate top-level name '", str_concat(node.name, "'")));
+            check_keyword_name(node.name, "struct declaration", node.file, node.line, node.column);
+            add_unique_name(symbols.all_names, node.name, node.file, node.line, node.column, "duplicate top-level name '" + node.name + "'");
             vec_push(symbols.structs, StructInfo { name: node.name, fields: vec_new() });
         } else if (node.kind == ParseNodeKind.EnumDecl) {
-            check_keyword_name(node.name, "enum declaration", node.line, node.column);
-            add_unique_name(symbols.all_names, node.name, str_concat("duplicate top-level name '", str_concat(node.name, "'")));
+            check_keyword_name(node.name, "enum declaration", node.file, node.line, node.column);
+            add_unique_name(symbols.all_names, node.name, node.file, node.line, node.column, "duplicate top-level name '" + node.name + "'");
             vec_push(symbols.enums, EnumInfo { name: node.name, members: vec_new() });
         } else if (node.kind == ParseNodeKind.FunctionDecl) {
-            check_keyword_name(node.name, "function declaration", node.line, node.column);
-            add_unique_name(symbols.all_names, node.name, str_concat("duplicate top-level name '", str_concat(node.name, "'")));
+            check_keyword_name(node.name, "function declaration", node.file, node.line, node.column);
+            add_unique_name(symbols.all_names, node.name, node.file, node.line, node.column, "duplicate top-level name '" + node.name + "'");
             vec_push(symbols.functions, FunctionInfo { name: node.name, params: vec_new(), return_type: node.value });
         }
         i = i + 1;
@@ -283,13 +283,13 @@ fn is_in_scope(scope: Scope, var_name: str) : bool {
     return false;
 }
 
-fn declare_var(stack: ScopeStack, var_name: str, type_name: str, line: int, column: int) : ScopeStack {
+fn declare_var(stack: ScopeStack, var_name: str, type_name: str, file: str, line: int, column: int) : ScopeStack {
     if (vec_len(stack.scopes) == 0) {
         checker_error("internal error: no scope to declare variable in");
     }
     let current_scope : Scope = vec_get(stack.scopes, vec_len(stack.scopes) - 1);
     if (is_in_scope(current_scope, var_name)) {
-        checker_error_at(line, column, str_concat("duplicate local variable '", str_concat(var_name, "' in the same scope")));
+        checker_error_at(file, line, column, "duplicate local variable '" + var_name + "' in the same scope");
     }
     vec_push(current_scope.names, VarInfo { name: var_name, type_name: type_name });
     return stack;
@@ -322,7 +322,7 @@ fn resolve_var_type(stack: ScopeStack, name: str, line: int, column: int) : str 
         i = i - 1;
     }
     // should never reach here if caller checks has_var first
-    checker_error(str_concat("internal error: variable '", str_concat(name, "' not found in any scope")));
+    checker_error("internal error: variable '" + name + "' not found in any scope");
 }
 
 fn check_struct_decl(node: ParseNode, symbols: SymbolTables) : void {
@@ -330,15 +330,15 @@ fn check_struct_decl(node: ParseNode, symbols: SymbolTables) : void {
     let struct_info : StructInfo = find_struct(symbols, node.name);
     while (i < vec_len(node.children)) {
         let field : ParseNode = vec_get(node.children, i);
-        check_keyword_name(field.name, "struct field declaration", field.line, field.column);
+        check_keyword_name(field.name, "struct field declaration", field.file, field.line, field.column);
         if (struct_has_field(struct_info, field.name)) {
-            checker_error(str_concat("duplicate field '", str_concat(field.name, str_concat("' in struct '", str_concat(node.name, "'")))));
+            checker_error_at(field.file, field.line, field.column, "duplicate field '" + field.name + "' in struct '" + node.name + "'");
         }
         if (str_eq(field.value, node.name)) {
-            checker_error_at(field.line, field.column, str_concat("struct '", str_concat(node.name, str_concat("' cannot contain field '", str_concat(field.name, "' of its own type")))));
+            checker_error_at(field.file, field.line, field.column, "struct '" + node.name + "' cannot contain field '" + field.name + "' of its own type");
         }
-        check_type_exists(field.value, symbols, "struct field declaration", field.line, field.column);
-        check_non_void_type(field.value, symbols, "struct field declaration", field.line, field.column);
+        check_type_exists(field.value, symbols, "struct field declaration", field.file, field.line, field.column);
+        check_non_void_type(field.value, symbols, "struct field declaration", field.file, field.line, field.column);
         vec_push(struct_info.fields, StructFieldInfo { name: field.name, type_name: field.value });
         i = i + 1;
     }
@@ -348,13 +348,13 @@ fn check_enum_decl(node: ParseNode, symbols: SymbolTables) : void {
     let i : int = 0;
     let enum_info : EnumInfo = find_enum(symbols, node.name);
     if (vec_len(node.children) == 0) {
-        checker_error_at(node.line, node.column, "enum must have at least one member");
+        checker_error_at(node.file, node.line, node.column, "enum must have at least one member");
     }
     while (i < vec_len(node.children)) {
         let member : ParseNode = vec_get(node.children, i);
-        check_keyword_name(member.name, "enum member declaration", member.line, member.column);
+        check_keyword_name(member.name, "enum member declaration", member.file, member.line, member.column);
         if (enum_has_member(enum_info, member.name)) {
-            checker_error(str_concat("duplicate member '", str_concat(member.name, str_concat("' in enum '", str_concat(node.name, "'")))));
+            checker_error_at(member.file, member.line, member.column, "duplicate member '" + member.name + "' in enum '" + node.name + "'");
         }
         vec_push(enum_info.members, member.name);
         i = i + 1;
@@ -364,26 +364,26 @@ fn check_enum_decl(node: ParseNode, symbols: SymbolTables) : void {
 fn check_function_decl(node: ParseNode, symbols: SymbolTables) : void {
     let i : int = 0;
     let func_info : FunctionInfo = find_function(symbols, node.name);
-    check_type_exists(node.value, symbols, "function return type", node.line, node.column);
+    check_type_exists(node.value, symbols, "function return type", node.file, node.line, node.column);
     while (i < vec_len(node.children)) {
         if (vec_get(node.children, i).kind == ParseNodeKind.ParamDecl) {
             let param : ParseNode = vec_get(node.children, i);
-            check_keyword_name(param.name, "function parameter", param.line, param.column);
+            check_keyword_name(param.name, "function parameter", param.file, param.line, param.column);
             if (func_has_param(func_info, param.name)) {
-                checker_error(str_concat("duplicate parameter '", str_concat(param.name, str_concat("' in function '", str_concat(node.name, "'")))));
+                checker_error_at(param.file, param.line, param.column, "duplicate parameter '" + param.name + "' in function '" + node.name + "'");
             }
-            check_type_exists(param.value, symbols, "function parameter type", param.line, param.column);
-            check_non_void_type(param.value, symbols, "function parameter type", param.line, param.column);
+            check_type_exists(param.value, symbols, "function parameter type", param.file, param.line, param.column);
+            check_non_void_type(param.value, symbols, "function parameter type", param.file, param.line, param.column);
             vec_push(func_info.params, ParamInfo { name: param.name, type_name: param.value });
         }
         i = i + 1;
     }
     if (str_eq(node.name, "main")) {
         if (!str_eq(node.value, "void")) {
-            checker_error_at(node.line, node.column, "'main' function must return 'void'");
+            checker_error_at(node.file, node.line, node.column, "'main' function must return 'void'");
         }
         if (vec_len(node.children) != 1) {
-            checker_error_at(node.line, node.column, "'main' function must have no parameters");
+            checker_error_at(node.file, node.line, node.column, "'main' function must have no parameters");
         }
     }
 }
@@ -403,9 +403,9 @@ fn validate_declarations(program: ParseNode, symbols: SymbolTables) : void {
     }
 }
 
-fn check_main_function(symbols: SymbolTables) : void {
+fn check_main_function(program: ParseNode, symbols: SymbolTables) : void {
     if (!has_function(symbols, "main")) {
-        checker_error("missing main function");
+        checker_error_at(program.file, 1, 1, "missing main function");
     }
 }
 
@@ -467,46 +467,46 @@ fn is_runtime_builtin(name: str) : bool {
 fn infer_runtime_builtin_call(expr: ParseNode, symbols: SymbolTables, stack: ScopeStack, expected_type: str) : str {
     if (str_eq(expr.name, "print_int")) {
         if (vec_len(expr.children) != 1) {
-            checker_error_at(expr.line, expr.column, "print_int expects 1 argument");
+            checker_error_at(expr.file, expr.line, expr.column, "print_int expects 1 argument");
         }
         infer_expr_type_expected(vec_get(expr.children, 0), symbols, stack, "int", "print_int");
         return "void";
     } else if (str_eq(expr.name, "print_str")) {
         if (vec_len(expr.children) != 1) {
-            checker_error_at(expr.line, expr.column, "print_str expects 1 argument");
+            checker_error_at(expr.file, expr.line, expr.column, "print_str expects 1 argument");
         }
         infer_expr_type_expected(vec_get(expr.children, 0), symbols, stack, "str", "print_str");
         return "void";
     } else if (str_eq(expr.name, "str_eq")) {
         if (vec_len(expr.children) != 2) {
-            checker_error_at(expr.line, expr.column, "str_eq expects 2 arguments");
+            checker_error_at(expr.file, expr.line, expr.column, "str_eq expects 2 arguments");
         }
         infer_expr_type_expected(vec_get(expr.children, 0), symbols, stack, "str", "str_eq");
         infer_expr_type_expected(vec_get(expr.children, 1), symbols, stack, "str", "str_eq");
         return "bool";
     } else if (str_eq(expr.name, "str_concat")) {
         if (vec_len(expr.children) != 2) {
-            checker_error_at(expr.line, expr.column, "str_concat expects 2 arguments");
+            checker_error_at(expr.file, expr.line, expr.column, "str_concat expects 2 arguments");
         }
         infer_expr_type_expected(vec_get(expr.children, 0), symbols, stack, "str", "str_concat");
         infer_expr_type_expected(vec_get(expr.children, 1), symbols, stack, "str", "str_concat");
         return "str";
     } else if (str_eq(expr.name, "str_len")) {
         if (vec_len(expr.children) != 1) {
-            checker_error_at(expr.line, expr.column, "str_len expects 1 argument");
+            checker_error_at(expr.file, expr.line, expr.column, "str_len expects 1 argument");
         }
         infer_expr_type_expected(vec_get(expr.children, 0), symbols, stack, "str", "str_len");
         return "int";
     } else if (str_eq(expr.name, "str_get")) {
         if (vec_len(expr.children) != 2) {
-            checker_error_at(expr.line, expr.column, "str_get expects 2 arguments");
+            checker_error_at(expr.file, expr.line, expr.column, "str_get expects 2 arguments");
         }
         infer_expr_type_expected(vec_get(expr.children, 0), symbols, stack, "str", "str_get");
         infer_expr_type_expected(vec_get(expr.children, 1), symbols, stack, "int", "str_get");
         return "int";
     } else if (str_eq(expr.name, "str_slice")) {
         if (vec_len(expr.children) != 3) {
-            checker_error_at(expr.line, expr.column, "str_slice expects 3 arguments");
+            checker_error_at(expr.file, expr.line, expr.column, "str_slice expects 3 arguments");
         }
         infer_expr_type_expected(vec_get(expr.children, 0), symbols, stack, "str", "str_slice");
         infer_expr_type_expected(vec_get(expr.children, 1), symbols, stack, "int", "str_slice");
@@ -514,81 +514,81 @@ fn infer_runtime_builtin_call(expr: ParseNode, symbols: SymbolTables, stack: Sco
         return "str";
     } else if (str_eq(expr.name, "str_starts_with")) {
         if (vec_len(expr.children) != 2) {
-            checker_error_at(expr.line, expr.column, "str_starts_with expects 2 arguments");
+            checker_error_at(expr.file, expr.line, expr.column, "str_starts_with expects 2 arguments");
         }
         infer_expr_type_expected(vec_get(expr.children, 0), symbols, stack, "str", "str_starts_with");
         infer_expr_type_expected(vec_get(expr.children, 1), symbols, stack, "str", "str_starts_with");
         return "bool";
     } else if (str_eq(expr.name, "str_contains")) {
         if (vec_len(expr.children) != 2) {
-            checker_error_at(expr.line, expr.column, "str_contains expects 2 arguments");
+            checker_error_at(expr.file, expr.line, expr.column, "str_contains expects 2 arguments");
         }
         infer_expr_type_expected(vec_get(expr.children, 0), symbols, stack, "str", "str_contains");
         infer_expr_type_expected(vec_get(expr.children, 1), symbols, stack, "str", "str_contains");
         return "bool";
     } else if (str_eq(expr.name, "int_to_str")) {
         if (vec_len(expr.children) != 1) {
-            checker_error_at(expr.line, expr.column, "int_to_str expects 1 argument");
+            checker_error_at(expr.file, expr.line, expr.column, "int_to_str expects 1 argument");
         }
         infer_expr_type_expected(vec_get(expr.children, 0), symbols, stack, "int", "int_to_str");
         return "str";
     } else if (str_eq(expr.name, "read_file")) {
         if (vec_len(expr.children) != 1) {
-            checker_error_at(expr.line, expr.column, "read_file expects 1 argument");
+            checker_error_at(expr.file, expr.line, expr.column, "read_file expects 1 argument");
         }
         infer_expr_type_expected(vec_get(expr.children, 0), symbols, stack, "str", "read_file");
         return "str";
     } else if (str_eq(expr.name, "write_file")) {
         if (vec_len(expr.children) != 2) {
-            checker_error_at(expr.line, expr.column, "write_file expects 2 arguments");
+            checker_error_at(expr.file, expr.line, expr.column, "write_file expects 2 arguments");
         }
         infer_expr_type_expected(vec_get(expr.children, 0), symbols, stack, "str", "write_file");
         infer_expr_type_expected(vec_get(expr.children, 1), symbols, stack, "str", "write_file");
         return "void";
     } else if (str_eq(expr.name, "buf_new")) {
         if (vec_len(expr.children) != 0) {
-            checker_error_at(expr.line, expr.column, "buf_new expects no arguments");
+            checker_error_at(expr.file, expr.line, expr.column, "buf_new expects no arguments");
         }
         return "int";
     } else if (str_eq(expr.name, "buf_push_str")) {
         if (vec_len(expr.children) != 2) {
-            checker_error_at(expr.line, expr.column, "buf_push_str expects 2 arguments");
+            checker_error_at(expr.file, expr.line, expr.column, "buf_push_str expects 2 arguments");
         }
         infer_expr_type_expected(vec_get(expr.children, 0), symbols, stack, "int", "buf_push_str");
         infer_expr_type_expected(vec_get(expr.children, 1), symbols, stack, "str", "buf_push_str");
         return "void";
     } else if (str_eq(expr.name, "buf_push_int")) {
         if (vec_len(expr.children) != 2) {
-            checker_error_at(expr.line, expr.column, "buf_push_int expects 2 arguments");
+            checker_error_at(expr.file, expr.line, expr.column, "buf_push_int expects 2 arguments");
         }
         infer_expr_type_expected(vec_get(expr.children, 0), symbols, stack, "int", "buf_push_int");
         infer_expr_type_expected(vec_get(expr.children, 1), symbols, stack, "int", "buf_push_int");
         return "void";
     } else if (str_eq(expr.name, "buf_to_str")) {
         if (vec_len(expr.children) != 1) {
-            checker_error_at(expr.line, expr.column, "buf_to_str expects 1 argument");
+            checker_error_at(expr.file, expr.line, expr.column, "buf_to_str expects 1 argument");
         }
         infer_expr_type_expected(vec_get(expr.children, 0), symbols, stack, "int", "buf_to_str");
         return "str";
     } else if (str_eq(expr.name, "arg_count")) {
         if (vec_len(expr.children) != 0) {
-            checker_error_at(expr.line, expr.column, "arg_count expects no arguments");
+            checker_error_at(expr.file, expr.line, expr.column, "arg_count expects no arguments");
         }
         return "int";
     } else if (str_eq(expr.name, "arg_get")) {
         if (vec_len(expr.children) != 1) {
-            checker_error_at(expr.line, expr.column, "arg_get expects 1 argument");
+            checker_error_at(expr.file, expr.line, expr.column, "arg_get expects 1 argument");
         }
         infer_expr_type_expected(vec_get(expr.children, 0), symbols, stack, "int", "arg_get");
         return "str";
     } else if (str_eq(expr.name, "nova_runtime_error")) {
         if (vec_len(expr.children) != 1) {
-            checker_error_at(expr.line, expr.column, "nova_runtime_error expects 1 argument");
+            checker_error_at(expr.file, expr.line, expr.column, "nova_runtime_error expects 1 argument");
         }
         infer_expr_type_expected(vec_get(expr.children, 0), symbols, stack, "str", "nova_runtime_error");
         return "void";
     } else {
-        checker_error_at(expr.line, expr.column, str_concat("unknown runtime builtin function '", str_concat(expr.name, "'")));
+        checker_error_at(expr.file, expr.line, expr.column, "unknown runtime builtin function '" + expr.name + "'");
     }
 }
 
@@ -604,57 +604,57 @@ fn is_vec_intrinsic(name: str) : bool {
 fn infer_vec_intrinsic_call(expr: ParseNode, symbols: SymbolTables, stack: ScopeStack, expected_type: str) : str {
     if (str_eq(expr.name, "vec_new")) {
         if (vec_len(expr.children) != 0) {
-            checker_error_at(expr.line, expr.column, "vec_new expects no arguments");
+            checker_error_at(expr.file, expr.line, expr.column, "vec_new expects no arguments");
         }
         if (!str_starts_with(expected_type, "vec<") || !str_eq(str_slice(expected_type, str_len(expected_type) - 1, str_len(expected_type)), ">")) {
-            checker_error_at(expr.line, expr.column, "cannot infer type for vec_new");
+            checker_error_at(expr.file, expr.line, expr.column, "cannot infer type for vec_new");
         }
         return expected_type;
     } else if (str_eq(expr.name, "vec_len")) {
         if (vec_len(expr.children) != 1) {
-            checker_error_at(expr.line, expr.column, "vec_len expects 1 argument");
+            checker_error_at(expr.file, expr.line, expr.column, "vec_len expects 1 argument");
         }
         let arg_type : str = infer_expr_type(vec_get(expr.children, 0), symbols, stack);
         if (!str_starts_with(arg_type, "vec<") || !str_eq(str_slice(arg_type, str_len(arg_type) - 1, str_len(arg_type)), ">")) {
-            checker_error_at(expr.line, expr.column, "vec_len argument must be a vector");
+            checker_error_at(expr.file, expr.line, expr.column, "vec_len argument must be a vector");
         }
         return "int";
     } else if (str_eq(expr.name, "vec_push")) {
         if (vec_len(expr.children) != 2) {
-            checker_error_at(expr.line, expr.column, "vec_push expects 2 arguments");
+            checker_error_at(expr.file, expr.line, expr.column, "vec_push expects 2 arguments");
         }
         let vec_arg_type : str = infer_expr_type(vec_get(expr.children, 0), symbols, stack);
         if (!str_starts_with(vec_arg_type, "vec<") || !str_eq(str_slice(vec_arg_type, str_len(vec_arg_type) - 1, str_len(vec_arg_type)), ">")) {
-            checker_error_at(expr.line, expr.column, "first argument of vec_push must be a vector");
+            checker_error_at(expr.file, expr.line, expr.column, "first argument of vec_push must be a vector");
         }
         let elem_type : str = str_slice(vec_arg_type, 4, str_len(vec_arg_type) - 1);
         infer_expr_type_expected(vec_get(expr.children, 1), symbols, stack, elem_type, "vec_push value");
         return "void";
     } else if (str_eq(expr.name, "vec_get")) {
         if (vec_len(expr.children) != 2) {
-            checker_error_at(expr.line, expr.column, "vec_get expects 2 arguments");
+            checker_error_at(expr.file, expr.line, expr.column, "vec_get expects 2 arguments");
         }
         let vec_arg_type : str = infer_expr_type(vec_get(expr.children, 0), symbols, stack);
         if (!str_starts_with(vec_arg_type, "vec<") || !str_eq(str_slice(vec_arg_type, str_len(vec_arg_type) - 1, str_len(vec_arg_type)), ">")) {
-            checker_error_at(expr.line, expr.column, "first argument of vec_get must be a vector");
+            checker_error_at(expr.file, expr.line, expr.column, "first argument of vec_get must be a vector");
         }
         let elem_type : str = str_slice(vec_arg_type, 4, str_len(vec_arg_type) - 1);
         infer_expr_type_expected(vec_get(expr.children, 1), symbols, stack, "int", "vec_get");
         return elem_type;
     } else if (str_eq(expr.name, "vec_set")) {
         if (vec_len(expr.children) != 3) {
-            checker_error_at(expr.line, expr.column, "vec_set expects 3 arguments");
+            checker_error_at(expr.file, expr.line, expr.column, "vec_set expects 3 arguments");
         }
         let vec_arg_type : str = infer_expr_type(vec_get(expr.children, 0), symbols, stack);
         if (!str_starts_with(vec_arg_type, "vec<") || !str_eq(str_slice(vec_arg_type, str_len(vec_arg_type) - 1, str_len(vec_arg_type)), ">")) {
-            checker_error_at(expr.line, expr.column, "first argument of vec_set must be a vector");
+            checker_error_at(expr.file, expr.line, expr.column, "first argument of vec_set must be a vector");
         }
         let elem_type : str = str_slice(vec_arg_type, 4, str_len(vec_arg_type) - 1);
         infer_expr_type_expected(vec_get(expr.children, 1), symbols, stack, "int", "vec_set");
         infer_expr_type_expected(vec_get(expr.children, 2), symbols, stack, elem_type, "vec_set");
         return "void";
     } else {
-        checker_error_at(expr.line, expr.column, str_concat("unknown vector intrinsic function '", str_concat(expr.name, "'")));
+        checker_error_at(expr.file, expr.line, expr.column, "unknown vector intrinsic function '" + expr.name + "'");
     }
 }
 
@@ -669,14 +669,14 @@ fn infer_expr_type_impl(expr: ParseNode, symbols: SymbolTables, stack: ScopeStac
         if (has_var(stack, expr.name)) {
             return resolve_var_type(stack, expr.name, expr.line, expr.column);
         } else {
-            checker_error_at(expr.line, expr.column, str_concat("undefined variable '", str_concat(expr.name, "'")));
+            checker_error_at(expr.file, expr.line, expr.column, "undefined variable '" + expr.name + "'");
         }
     } else if (expr.kind == ParseNodeKind.UnaryExpr) {
         let operand_type : str = infer_expr_type(vec_get(expr.children, 0), symbols, stack);
         if (str_eq(expr.name, "-") && !str_eq(operand_type, "int")) {
-            checker_error_at(expr.line, expr.column, "unary operator '-' requires 'int' operand");
+            checker_error_at(expr.file, expr.line, expr.column, "unary operator '-' requires 'int' operand");
         } else if (str_eq(expr.name, "!") && !str_eq(operand_type, "bool")) {
-            checker_error_at(expr.line, expr.column, "unary operator '!' requires 'bool' operand");
+            checker_error_at(expr.file, expr.line, expr.column, "unary operator '!' requires 'bool' operand");
         }
         return operand_type;
     } else if (expr.kind == ParseNodeKind.BinaryExpr) {
@@ -688,38 +688,38 @@ fn infer_expr_type_impl(expr: ParseNode, symbols: SymbolTables, stack: ScopeStac
             } else if (str_eq(left_type, "str") && str_eq(right_type, "str")) {
                 return "str";
             }
-            checker_error_at(expr.line, expr.column, "binary operator '" + expr.name + "' requires 'int' or 'str' operands");
+            checker_error_at(expr.file, expr.line, expr.column, "binary operator '" + expr.name + "' requires 'int' or 'str' operands");
         } else if (str_eq(expr.name, "-") || str_eq(expr.name, "*") || str_eq(expr.name, "/") || str_eq(expr.name, "%")) {
             if (!str_eq(left_type, "int") || !str_eq(right_type, "int")) {
-                checker_error_at(expr.line, expr.column, str_concat("binary operator '", str_concat(expr.name, "' requires 'int' operands")));
+                checker_error_at(expr.file, expr.line, expr.column, "binary operator '" + expr.name + "' requires 'int' operands");
             }
             return "int";
         } else if (str_eq(expr.name, "<") || str_eq(expr.name, "<=") || str_eq(expr.name, ">") || str_eq(expr.name, ">=")) {
             if (!str_eq(left_type, "int") || !str_eq(right_type, "int")) {
-                checker_error_at(expr.line, expr.column, str_concat("binary operator '", str_concat(expr.name, "' requires 'int' operands")));
+                checker_error_at(expr.file, expr.line, expr.column, "binary operator '" + expr.name + "' requires 'int' operands");
             }
             return "bool";
         } else if (str_eq(expr.name, "==") || str_eq(expr.name, "!=")) {
             if (!str_eq(left_type, "int") && !str_eq(left_type, "bool") && !str_eq(left_type, "str") && !has_enum(symbols, left_type)) {
-                checker_error_at(expr.line, expr.column, str_concat("binary operator '", str_concat(expr.name, "' only supports 'int', 'bool', 'str' or 'enum' operands")));
+                checker_error_at(expr.file, expr.line, expr.column, "binary operator '" + expr.name + "' only supports 'int', 'bool', 'str' or 'enum' operands");
             }
             if (!str_eq(left_type, right_type)) {
-                checker_error_at(expr.line, expr.column, str_concat("binary operator '", str_concat(expr.name, "' requires operands of the same type")));
+                checker_error_at(expr.file, expr.line, expr.column, "binary operator '" + expr.name + "' requires operands of the same type");
             }
             return "bool";
         } else if (str_eq(expr.name, "&&") || str_eq(expr.name, "||")) {
             if (!str_eq(left_type, "bool") || !str_eq(right_type, "bool")) {
-                checker_error_at(expr.line, expr.column, str_concat("binary operator '", str_concat(expr.name, "' requires 'bool' operands")));
+                checker_error_at(expr.file, expr.line, expr.column, "binary operator '" + expr.name + "' requires 'bool' operands");
             }
             return "bool";
         } else {
-            checker_error_at(expr.line, expr.column, str_concat("unknown binary operator '", str_concat(expr.name, "'")));
+            checker_error_at(expr.file, expr.line, expr.column, "unknown binary operator '" + expr.name + "'");
         }
     } else if (expr.kind == ParseNodeKind.AssignExpr) {
         let left_expr : ParseNode = vec_get(expr.children, 0);
         let right_expr : ParseNode = vec_get(expr.children, 1);
         if (!is_assignable_expr(left_expr, symbols, stack)) {
-            checker_error_at(left_expr.line, left_expr.column, "invalid assignment target");
+            checker_error_at(left_expr.file, left_expr.line, left_expr.column, "invalid assignment target");
         }
 
         let target_type : str = infer_expr_type(left_expr, symbols, stack);
@@ -733,13 +733,13 @@ fn infer_expr_type_impl(expr: ParseNode, symbols: SymbolTables, stack: ScopeStac
             return infer_vec_intrinsic_call(expr, symbols, stack, expected_type);
         }
         if (!has_function(symbols, expr.name)) {
-            checker_error_at(expr.line, expr.column, str_concat("undefined function '", str_concat(expr.name, "'")));
+            checker_error_at(expr.file, expr.line, expr.column, "undefined function '" + expr.name + "'");
         }
 
         let func_info : FunctionInfo = find_function(symbols, expr.name);
 
         if (vec_len(expr.children) != vec_len(func_info.params)) {
-            checker_error_at(expr.line, expr.column, str_concat("function '", str_concat(str_concat(expr.name, str_concat("' expects ", int_to_str(vec_len(func_info.params)))), str_concat(" arguments but got ", int_to_str(vec_len(expr.children))))));
+            checker_error_at(expr.file, expr.line, expr.column, "function '" + expr.name + "' expects " + int_to_str(vec_len(func_info.params)) + " arguments but got " + int_to_str(vec_len(expr.children)));
         }
         let i : int = 0;
         while (i < vec_len(expr.children)) {
@@ -755,7 +755,7 @@ fn infer_expr_type_impl(expr: ParseNode, symbols: SymbolTables, stack: ScopeStac
         if (base_expr.kind == ParseNodeKind.IdentifierExpr && has_enum(symbols, base_expr.name)) {
             let enum_info : EnumInfo = find_enum(symbols, base_expr.name);
             if (!enum_has_member(enum_info, expr.name)) {
-                checker_error_at(expr.line, expr.column, str_concat("unknown member '", str_concat(expr.name, str_concat("' in enum '", str_concat(base_expr.name, "'")))));
+                checker_error_at(expr.file, expr.line, expr.column, "unknown member '" + expr.name + "' in enum '" + base_expr.name + "'");
             }
             return base_expr.name;
         }
@@ -764,15 +764,15 @@ fn infer_expr_type_impl(expr: ParseNode, symbols: SymbolTables, stack: ScopeStac
         if (has_struct(symbols, base_type)) {
             let struct_info : StructInfo = find_struct(symbols, base_type);
             if (!struct_has_field(struct_info, expr.name)) {
-                checker_error_at(expr.line, expr.column, str_concat("unknown field '", str_concat(expr.name, str_concat("' in struct '", str_concat(base_type, "'")))));
+                checker_error_at(expr.file, expr.line, expr.column, "unknown field '" + expr.name + "' in struct '" + base_type + "'");
             }
             return struct_field_type(struct_info, expr.name);
         } else {
-            checker_error_at(base_expr.line, base_expr.column, str_concat("type '", str_concat(base_type, "' does not support field access")));
+            checker_error_at(base_expr.file, base_expr.line, base_expr.column, "type '" + base_type + "' does not support field access");
         }
     } else if (expr.kind == ParseNodeKind.StructLiteralExpr) {
         if (!has_struct(symbols, expr.name)) {
-            checker_error_at(expr.line, expr.column, str_concat("undefined struct '", str_concat(expr.name, "'")));
+            checker_error_at(expr.file, expr.line, expr.column, "undefined struct '" + expr.name + "'");
         }
         let struct_info : StructInfo = find_struct(symbols, expr.name);
         let i : int = 0;
@@ -780,13 +780,13 @@ fn infer_expr_type_impl(expr: ParseNode, symbols: SymbolTables, stack: ScopeStac
         while (i < vec_len(expr.children)) {
             let field_init : ParseNode = vec_get(expr.children, i);
             if (field_init.kind != ParseNodeKind.StructFieldInitExpr) {
-                checker_error_at(field_init.line, field_init.column, "expected field initializer in struct literal");
+                checker_error_at(field_init.file, field_init.line, field_init.column, "expected field initializer in struct literal");
             }
             if (!struct_has_field(struct_info, field_init.name)) {
-                checker_error_at(field_init.line, field_init.column, str_concat("unknown field '", str_concat(field_init.name, str_concat("' in struct '", str_concat(expr.name, "'")))));
+                checker_error_at(field_init.file, field_init.line, field_init.column, "unknown field '" + field_init.name + "' in struct '" + expr.name + "'");
             }
             if (vec_str_contains(seen_fields, field_init.name)) {
-                checker_error_at(field_init.line, field_init.column, str_concat("field '", str_concat(field_init.name, "' is already initialized")));
+                checker_error_at(field_init.file, field_init.line, field_init.column, "field '" + field_init.name + "' is already initialized");
             }
             let expected_type : str = struct_field_type(struct_info, field_init.name);
             infer_expr_type_expected(vec_get(field_init.children, 0), symbols, stack, expected_type, "struct literal field initializer");
@@ -794,11 +794,11 @@ fn infer_expr_type_impl(expr: ParseNode, symbols: SymbolTables, stack: ScopeStac
             i = i + 1;
         }
         if (vec_len(seen_fields) != vec_len(struct_info.fields)) {
-            checker_error_at(expr.line, expr.column, "missing field initializers in struct literal");
+            checker_error_at(expr.file, expr.line, expr.column, "missing field initializers in struct literal");
         }
         return expr.name;
     } else {
-        checker_error_at(expr.line, expr.column, "expression type inference not implemented for this expression kind");
+        checker_error_at(expr.file, expr.line, expr.column, "expression type inference not implemented for this expression kind");
     }
 }
 
@@ -809,8 +809,7 @@ fn infer_expr_type(expr: ParseNode, symbols: SymbolTables, stack: ScopeStack) : 
 fn infer_expr_type_expected(expr: ParseNode, symbols: SymbolTables, stack: ScopeStack, expected_type: str, context: str) : str {
     let actual_type : str = infer_expr_type_impl(expr, symbols, stack, expected_type, context);
     if (!str_eq(actual_type, expected_type)) {
-        checker_error_at(expr.line, expr.column, 
-            str_concat("type error in ", str_concat(context, str_concat(": expected '", str_concat(expected_type, str_concat("', got '", str_concat(actual_type, "'")))))));
+        checker_error_at(expr.file, expr.line, expr.column, "type error in " + context + ": expected '" + expected_type + "', got '" + actual_type + "'");
     }
     return actual_type;
 }
@@ -835,7 +834,7 @@ fn expr_is_no_return_call(expr: ParseNode) : bool {
 
 fn block_always_exits(block: ParseNode) : bool {
     if (block.kind != ParseNodeKind.BlockStmt) {
-        checker_error_at(block.line, block.column, "expected block statement");
+        checker_error_at(block.file, block.line, block.column, "expected block statement");
     }
     let i : int = 0;
     while (i < vec_len(block.children)) {
@@ -881,16 +880,16 @@ fn check_stmt_type(stmt: ParseNode, symbols: SymbolTables, stack: ScopeStack, re
         stack = check_block_type(stmt, symbols, stack, return_type);
         stack = pop_scope(stack);
     } else if (stmt.kind == ParseNodeKind.LetStmt) {
-        check_type_exists(stmt.value, symbols, "variable declaration", stmt.line, stmt.column);
-        check_non_void_type(stmt.value, symbols, "variable declaration", stmt.line, stmt.column);
-        
+        check_type_exists(stmt.value, symbols, "variable declaration", stmt.file, stmt.line, stmt.column);
+        check_non_void_type(stmt.value, symbols, "variable declaration", stmt.file, stmt.line, stmt.column);
+
         if (vec_len(stmt.children) != 1) {
-            checker_error_at(stmt.line, stmt.column, "variable declaration requires initializer");
+            checker_error_at(stmt.file, stmt.line, stmt.column, "variable declaration requires initializer");
         }
         
         let init_expr : ParseNode = vec_get(stmt.children, 0);
         let init_type : str = infer_expr_type_expected(init_expr, symbols, stack, stmt.value, "variable declaration");
-        stack = declare_var(stack, stmt.name, stmt.value, stmt.line, stmt.column);
+        stack = declare_var(stack, stmt.name, stmt.value, stmt.file, stmt.line, stmt.column);
     } else if (stmt.kind == ParseNodeKind.IfStmt) {
         let condition : ParseNode = vec_get(stmt.children, 0);
         let cond_type : str = infer_expr_type_expected(vec_get(condition.children, 0), symbols, stack, "bool", "if condition");
@@ -914,11 +913,11 @@ fn check_stmt_type(stmt: ParseNode, symbols: SymbolTables, stack: ScopeStack, re
     } else if (stmt.kind == ParseNodeKind.ReturnStmt) {
         if (str_eq(return_type, "void")) {
             if (vec_len(stmt.children) > 0) {
-                checker_error_at(stmt.line, stmt.column, "return statement in void function cannot return a value");
+                checker_error_at(stmt.file, stmt.line, stmt.column, "return statement in void function cannot return a value");
             }
         } else {
             if (vec_len(stmt.children) == 0) {
-                checker_error_at(stmt.line, stmt.column, str_concat("missing return value in return statement, expected type '", str_concat(return_type, "'")));
+                checker_error_at(stmt.file, stmt.line, stmt.column, "missing return value in return statement, expected type '" + return_type + "'");
             } else {
                 let return_expr : ParseNode = vec_get(stmt.children, 0);
                 let return_expr_type : str = infer_expr_type_expected(return_expr, symbols, stack, return_type, "return statement");
@@ -947,11 +946,11 @@ fn check_function_body(node: ParseNode, symbols: SymbolTables) : void {
     while (i < vec_len(node.children)) {
         let child : ParseNode = vec_get(node.children, i);
         if (child.kind == ParseNodeKind.ParamDecl) {
-            scope_stack = declare_var(scope_stack, child.name, child.value, child.line, child.column);
+            scope_stack = declare_var(scope_stack, child.name, child.value, child.file, child.line, child.column);
         } else if (child.kind == ParseNodeKind.BlockStmt) {
             scope_stack = check_block_type(child, symbols, scope_stack, node.value);
             if (!block_always_exits(child) && !str_eq(node.value, "void")) {
-                checker_error_at(node.line, node.column, "missing return statement in function '" + node.name + "'");
+                checker_error_at(node.file, node.line, node.column, "missing return statement in function '" + node.name + "'");
             }
         }
         i = i + 1;
@@ -973,7 +972,7 @@ fn check_program(tree: ParseNode) : str {
     let symbols : SymbolTables = collect_top_level_symbols(tree);
 
     validate_declarations(tree, symbols);
-    check_main_function(symbols);
+    check_main_function(tree, symbols);
     validate_function_bodies(tree, symbols);
 
     let out : int = buf_new();

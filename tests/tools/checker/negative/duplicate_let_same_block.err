@@ -1,1 +1,1 @@
-CheckerError at 3:5: duplicate local variable 'x' in the same scope
+tests/tools/checker/negative/duplicate_let_same_block.nv:3:5: CheckerError: duplicate local variable 'x' in the same scope

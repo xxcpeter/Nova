@@ -35,7 +35,32 @@ char Lexer::advance() {
 
 
 SourceLocation Lexer::current_location() const {
-    return SourceLocation{ line_, column_ };
+    return location_for_current_position();
+}
+
+
+SourceLocation Lexer::location_for_current_position() const {
+    if (!line_mapping_.empty() && line_ >= 1 && line_ <= line_mapping_.size()) {
+        return SourceLocation{
+            .file = line_mapping_[line_ - 1].file,
+            .line = line_mapping_[line_ - 1].original_line,
+            .column = column_
+        };
+    }
+
+    if (!line_mapping_.empty()) {
+        return SourceLocation{
+            .file = line_mapping_.back().file,
+            .line = line_mapping_.back().original_line + 1,
+            .column = column_
+        };
+    }
+
+    return SourceLocation{
+        .file = std::string(source_filename_),
+        .line = line_,
+        .column = column_
+    };
 }
 
 
@@ -186,7 +211,7 @@ Token Lexer::next_token() {
     skip_whitespace_and_comments();
     
     if (is_at_end()) 
-        return Token{ TokenType::EndOfFile, "", SourceLocation{ line_, column_ } };
+        return Token{ TokenType::EndOfFile, "", location_for_current_position() };
     
     char curr = peek();
 

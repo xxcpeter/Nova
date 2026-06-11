@@ -1,1 +1,1 @@
-SemanticError at 1:14: duplicate variable 'x'
+tests/sema/negative/duplicate_parameter_name.nv:1:14: SemanticError: duplicate variable 'x'

@@ -1,1 +1,1 @@
-SemanticError at 6:22: type error in argument 1 in call to 'id': expected int, got bool
+tests/sema/negative/function_argument_type_mismatch.nv:6:22: SemanticError: type error in argument 1 in call to 'id': expected int, got bool

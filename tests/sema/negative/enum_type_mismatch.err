@@ -1,1 +1,1 @@
-SemanticError at 10:21: type error in variable initializer: expected Color, got Shape
+tests/sema/negative/enum_type_mismatch.nv:10:21: SemanticError: type error in variable initializer: expected Color, got Shape

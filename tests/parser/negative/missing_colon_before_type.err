@@ -1,1 +1,1 @@
-ParseError at 1:10: expected ':' before return type
+tests/parser/negative/missing_colon_before_type.nv:1:10: ParseError: expected ':' before return type

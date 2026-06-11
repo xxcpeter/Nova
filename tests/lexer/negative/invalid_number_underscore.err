@@ -1,1 +1,1 @@
-LexError at 1:4: Invalid number literal
+tests/lexer/negative/invalid_number_underscore.nv:1:4: LexError: Invalid number literal

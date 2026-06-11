@@ -1,6 +1,26 @@
 import "diagnostics.nv";
 
 
+struct SourceLineInfo {
+    path : str;
+    line : int;
+}
+
+struct LoadedSource {
+    text : str;
+    lines : vec<SourceLineInfo>;
+}
+
+struct ImportContext {
+    project_root : str;
+    import_spec : str;
+    import_path : str;
+    import_line : int;
+    import_column : int;
+    visited : vec<str>;
+    stack : vec<str>;
+}
+
 fn import_is_whitespace(c: int) : bool {
     return c == 32 || c == 9 || c == 10 || c == 13;
 }
@@ -51,12 +71,12 @@ fn path_join(base: str, child: str) : str {
         return child;
     }
     if (str_get(base, str_len(base) - 1) == 47) {
-        return str_concat(base, child);
+        return base + child;
     }
-    return str_concat(str_concat(base, "/"), child);
+    return base + "/" + child;
 }
 
-fn parse_import_line(line: str) : str {
+fn parse_import_line(line: str, file: str, line_number: int) : str {
     let i : int = 0;
     while (i < str_len(line) && import_is_whitespace(str_get(line, i))) {
         i = i + 1;
@@ -75,7 +95,7 @@ fn parse_import_line(line: str) : str {
         i = i + 1;
     }
     if (i >= str_len(line) || str_get(line, i) != 34) {
-        import_error("malformed import directive");
+        import_error_at(file, line_number, i + 1, "malformed import directive");
     }
 
     i = i + 1;
@@ -84,16 +104,20 @@ fn parse_import_line(line: str) : str {
         i = i + 1;
     }
     if (i >= str_len(line)) {
-        import_error("malformed import directive");
+        import_error_at(file, line_number, i + 1, "malformed import directive");
     }
 
     let import_path : str = str_slice(line, start, i);
+    if (str_eq(import_path, "")) {
+        import_error_at(file, line_number, i + 1, "malformed import directive");
+    }
+
     i = i + 1;
     while (i < str_len(line) && import_is_whitespace(str_get(line, i))) {
         i = i + 1;
     }
     if (i >= str_len(line) || str_get(line, i) != 59) {
-        import_error("malformed import directive");
+        import_error_at(file, line_number, i + 1, "malformed import directive");
     }
 
     i = i + 1;
@@ -101,7 +125,7 @@ fn parse_import_line(line: str) : str {
         i = i + 1;
     }
     if (i != str_len(line)) {
-        import_error("malformed import directive");
+        import_error_at(file, line_number, i + 1, "malformed import directive");
     }
     return import_path;
 }
@@ -117,54 +141,127 @@ fn vec_str_copy_append(xs: vec<str>, value: str) : vec<str> {
     return out;
 }
 
-fn expand_file(path: str, display_path: str, visited: vec<str>, stack: vec<str>) : str {
-    if (import_vec_str_contains(stack, path)) {
-        import_error(str_concat("cyclic import involving '", str_concat(display_path, "'")));
+fn expand_file(path: str, display_path: str, context: ImportContext, loaded: LoadedSource) : LoadedSource {
+    if (import_vec_str_contains(context.stack, path)) {
+        import_error_at(context.import_path, context.import_line, context.import_column, "cyclic import involving '" + context.import_spec + "'");
     }
-    if (import_vec_str_contains(visited, path)) {
-        return "";
+    if (import_vec_str_contains(context.visited, path)) {
+        return loaded;
     }
 
-    vec_push(visited, path);
-    let active_stack : vec<str> = vec_str_copy_append(stack, path);
+    vec_push(context.visited, path);
+    let active_stack : vec<str> = vec_str_copy_append(context.stack, path);
 
     let source : str = read_file(path);
-    let out : int = buf_new();
     let line_start : int = 0;
+    let line_number : int = 1;
     let i : int = 0;
     while (i < str_len(source)) {
         if (str_get(source, i) == 10) {
             let line : str = str_slice(source, line_start, i);
-            let import_path : str = parse_import_line(line);
+            let import_path : str = parse_import_line(line, path, line_number);
             if (!str_eq(import_path, "")) {
                 let resolved : str = path_join(path_dirname(path), import_path);
-                buf_push_str(out, expand_file(resolved, import_path, visited, active_stack));
-                buf_push_str(out, "\n");
+                let new_display_path : str = display_path_for(resolved, context.project_root);
+                let child_context : ImportContext = ImportContext {
+                    project_root: context.project_root,
+                    import_spec: import_path,
+                    import_path: new_display_path,
+                    import_line: line_number,
+                    import_column: 1,
+                    visited: context.visited,
+                    stack: active_stack
+                };
+                loaded = expand_file(resolved, new_display_path, child_context, loaded);
             } else {
-                buf_push_str(out, line);
-                buf_push_str(out, "\n");
+                loaded.text = loaded.text + line + "\n";
+                vec_push(loaded.lines, SourceLineInfo { path: display_path, line: line_number });
             }
             line_start = i + 1;
+            line_number = line_number + 1;
         }
         i = i + 1;
     }
     if (line_start < str_len(source)) {
         let line : str = str_slice(source, line_start, str_len(source));
-        let import_path : str = parse_import_line(line);
+        let import_path : str = parse_import_line(line, path, line_number);
         if (!str_eq(import_path, "")) {
             let resolved : str = path_join(path_dirname(path), import_path);
-            buf_push_str(out, expand_file(resolved, import_path, visited, active_stack));
-            buf_push_str(out, "\n");
+            let new_display_path : str = display_path_for(resolved, context.project_root);
+            let child_context : ImportContext = ImportContext {
+                project_root: context.project_root,
+                import_spec: import_path,
+                import_path: new_display_path,
+                import_line: line_number,
+                import_column: 1,
+                visited: context.visited,
+                stack: active_stack
+            };
+            loaded = expand_file(resolved, new_display_path, child_context, loaded);
         } else {
-            buf_push_str(out, line);
-            buf_push_str(out, "\n");
+            loaded.text = loaded.text + line + "\n";
+            vec_push(loaded.lines, SourceLineInfo { path: display_path, line: line_number });
         }
     }
-    return buf_to_str(out);
+    return loaded;
 }
 
-fn load_source_with_imports(path: str) : str {
+fn find_substr_index(s: str, needle: str) : int {
+    let i : int = 0;
+    while (i + str_len(needle) <= str_len(s)) {
+        if (str_eq(str_slice(s, i, i + str_len(needle)), needle)) {
+            return i;
+        }
+        i = i + 1;
+    }
+    return -1;
+}
+
+fn infer_project_root(path: str) : str {
+    let tests_index : int = find_substr_index(path, "/tests/");
+    if (tests_index >= 0) {
+        return str_slice(path, 0, tests_index + 1);
+    }
+
+    let tools_index : int = find_substr_index(path, "/tools/");
+    if (tools_index >= 0) {
+        return str_slice(path, 0, tools_index + 1);
+    }
+
+    let lib_index : int = find_substr_index(path, "/lib/");
+    if (lib_index >= 0) {
+        return str_slice(path, 0, lib_index + 1);
+    }
+
+    let examples_index : int = find_substr_index(path, "/examples/");
+    if (examples_index >= 0) {
+        return str_slice(path, 0, examples_index + 1);
+    }
+
+    return path;
+}
+
+fn path_starts_with(s: str, prefix: str) : bool {
+    if (str_len(s) < str_len(prefix)) {
+        return false;
+    }
+    return str_eq(str_slice(s, 0, str_len(prefix)), prefix);
+}
+
+fn display_path_for(path: str, project_root: str) : str {
+    if (path_starts_with(path, project_root)) {
+        return str_slice(path, str_len(project_root), str_len(path));
+    }
+    return path;
+}
+
+fn load_source_with_imports(path: str) : LoadedSource {
     let visited : vec<str> = vec_new();
     let stack : vec<str> = vec_new();
-    return expand_file(path, path, visited, stack);
+    let project_root : str = infer_project_root(path);
+    let display_path : str = display_path_for(path, project_root);
+    let source : LoadedSource = expand_file(path, display_path, 
+        ImportContext { project_root: project_root, import_spec: display_path, import_path: display_path, import_line: 0, import_column: 0, visited: visited, stack: stack }, 
+        LoadedSource { text: "", lines: vec_new() });
+    return source;
 }

@@ -1,1 +1,1 @@
-SemanticError at 2:18: vector element type cannot be void
+tests/sema/negative/vec_void_element.nv:2:18: SemanticError: vector element type cannot be void

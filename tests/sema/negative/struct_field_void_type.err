@@ -1,1 +1,1 @@
-SemanticError at 2:5: field 'x' in struct 'Bad' cannot have void type
+tests/sema/negative/struct_field_void_type.nv:2:5: SemanticError: field 'x' in struct 'Bad' cannot have void type

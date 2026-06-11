@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 #include <memory>
+#include <cstddef>
 #include <unordered_set>
 #include <optional>
 

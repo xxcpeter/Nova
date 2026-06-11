@@ -1,1 +1,1 @@
-SemanticError at 3:31: type error in vec_get index: expected int, got bool
+tests/sema/negative/vec_get_index_not_int.nv:3:31: SemanticError: type error in vec_get index: expected int, got bool

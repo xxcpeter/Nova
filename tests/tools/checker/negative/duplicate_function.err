@@ -1,1 +1,1 @@
-CheckerError: duplicate top-level name 'main'
+tests/tools/checker/negative/duplicate_function.nv:5:1: CheckerError: duplicate top-level name 'main'

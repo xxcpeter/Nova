@@ -22,9 +22,9 @@ int main(int argc, char* argv[]) {
     std::string name = std::filesystem::path(input_path).filename().string();
     
     try {
-        std::string source = load_source_with_imports(std::filesystem::path(input_path));
+        LoadedSource source = load_source_with_imports(std::filesystem::path(input_path));
         
-        Lexer lexer(source, name);
+        Lexer lexer(source);
         auto token_list = lexer.tokenize();
 
         Parser parser(token_list, name);

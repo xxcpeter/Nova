@@ -1,1 +1,1 @@
-SemanticError at 1:6: unknown type 'Point'
+tests/sema/negative/struct_param_unknown_type.nv:1:6: SemanticError: unknown type 'Point'

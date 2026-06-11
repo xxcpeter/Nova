@@ -1,1 +1,1 @@
-CheckerError at 1:1: missing return statement in function 'bad'
+tests/tools/typecheck/negative/missing_return.nv:1:1: CheckerError: missing return statement in function 'bad'

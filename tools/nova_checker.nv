@@ -13,7 +13,7 @@ fn main() : void {
     let input_path : str = arg_get(1);
     let output_path : str = arg_get(2);
 
-    let source : str = load_source_with_imports(input_path);
+    let source : LoadedSource = load_source_with_imports(input_path);
     let tokens : vec<Token> = tokenize(source);
     let tree : ParseNode = parse_program_tree(tokens);
     let result : str = check_program(tree);

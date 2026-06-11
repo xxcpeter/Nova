@@ -4,6 +4,8 @@
 #include <string>
 #include <format>
 #include <vector>
+#include <cstddef>
+#include <stdexcept>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -120,9 +122,10 @@ private:
 };
 
 
-class SemaError : public std::runtime_error {
+class 
+SemaError : public std::runtime_error {
 public:
     SemaError(const std::string& message, const SourceLocation& location) : 
-        std::runtime_error(std::format("SemanticError at {}:{}: {}", 
-            location.line, location.column, message)) {}
+        std::runtime_error(std::format("{}:{}:{}: SemanticError: {}", 
+            location.file, location.line, location.column, message)) {}
 };

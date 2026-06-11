@@ -14,7 +14,7 @@ fn main() : void {
     let input_path : str = arg_get(2);
     let output_path : str = arg_get(3);
 
-    let source : str = load_source_with_imports(input_path);
+    let source : LoadedSource = load_source_with_imports(input_path);
 
     if (str_eq(mode, "tokens")) {
         let tokens : vec<Token> = tokenize(source);
@@ -39,6 +39,6 @@ fn main() : void {
         return;
     }
 
-    nova_runtime_error(str_concat("unknown frontend mode '", str_concat(mode, "'")));
+    nova_runtime_error("unknown frontend mode '" + mode + "'");
     return;
 }

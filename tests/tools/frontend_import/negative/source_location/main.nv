@@ -1,0 +1,5 @@
+import "bad.nv";
+
+fn main() : void {
+    return;
+}

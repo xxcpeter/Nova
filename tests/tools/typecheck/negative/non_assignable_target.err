@@ -1,1 +1,1 @@
-CheckerError at 2:5: invalid assignment target
+tests/tools/typecheck/negative/non_assignable_target.nv:2:5: CheckerError: invalid assignment target

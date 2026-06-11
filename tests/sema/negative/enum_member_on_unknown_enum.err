@@ -1,1 +1,1 @@
-SemanticError at 2:19: undefined variable or enum 'Missing'
+tests/sema/negative/enum_member_on_unknown_enum.nv:2:19: SemanticError: undefined variable or enum 'Missing'

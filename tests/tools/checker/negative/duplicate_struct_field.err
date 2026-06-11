@@ -1,1 +1,1 @@
-CheckerError: duplicate field 'x' in struct 'Point'
+tests/tools/checker/negative/duplicate_struct_field.nv:3:5: CheckerError: duplicate field 'x' in struct 'Point'
