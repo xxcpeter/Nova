@@ -187,7 +187,7 @@ fn is_keyword_name(name: str) : bool {
 }
 
 fn is_known_type(type_name: str, symbols: SymbolTables) : bool {
-    if (str_starts_with(type_name, "vec<") && str_eq(str_slice(type_name, str_len(type_name) - 1, str_len(type_name)), ">")) {
+    if (str_starts_with(type_name, "vec<") && str_ends_with(type_name, ">")) {
         let inner_type : str = str_slice(type_name, 4, str_len(type_name) - 1);
         return (!str_eq(inner_type, "void") && !str_starts_with(inner_type, "vec<") && is_known_type(inner_type, symbols));
     }
@@ -437,6 +437,7 @@ fn is_assignable_expr(expr: ParseNode, symbols: SymbolTables, stack: ScopeStack)
 // str_get(str, int) -> int
 // str_slice(str, int, int) -> str
 // str_starts_with(str, str) -> bool
+// str_ends_with(str, str) -> bool
 // str_contains(str, str) -> bool
 // int_to_str(int) -> str
 
@@ -455,7 +456,8 @@ fn is_assignable_expr(expr: ParseNode, symbols: SymbolTables, stack: ScopeStack)
 fn is_runtime_builtin(name: str) : bool {
     return str_eq(name, "print_int") || str_eq(name, "print_str") ||
             str_eq(name, "str_eq") || str_eq(name, "str_concat") || str_eq(name, "str_len") ||
-            str_eq(name, "str_get") || str_eq(name, "str_slice") || str_eq(name, "str_starts_with") ||
+            str_eq(name, "str_get") || str_eq(name, "str_slice") || 
+            str_eq(name, "str_starts_with") || str_eq(name, "str_ends_with") ||
             str_eq(name, "str_contains") || str_eq(name, "int_to_str") ||
             str_eq(name, "read_file") || str_eq(name, "write_file") ||
             str_eq(name, "buf_new") || str_eq(name, "buf_push_str") || 
@@ -518,6 +520,13 @@ fn infer_runtime_builtin_call(expr: ParseNode, symbols: SymbolTables, stack: Sco
         }
         infer_expr_type_expected(vec_get(expr.children, 0), symbols, stack, "str", "str_starts_with");
         infer_expr_type_expected(vec_get(expr.children, 1), symbols, stack, "str", "str_starts_with");
+        return "bool";
+    } else if (str_eq(expr.name, "str_ends_with")) {
+        if (vec_len(expr.children) != 2) {
+            checker_error_at(expr.file, expr.line, expr.column, "str_ends_with expects 2 arguments");
+        }
+        infer_expr_type_expected(vec_get(expr.children, 0), symbols, stack, "str", "str_ends_with");
+        infer_expr_type_expected(vec_get(expr.children, 1), symbols, stack, "str", "str_ends_with");
         return "bool";
     } else if (str_eq(expr.name, "str_contains")) {
         if (vec_len(expr.children) != 2) {
@@ -606,7 +615,7 @@ fn infer_vec_intrinsic_call(expr: ParseNode, symbols: SymbolTables, stack: Scope
         if (vec_len(expr.children) != 0) {
             checker_error_at(expr.file, expr.line, expr.column, "vec_new expects no arguments");
         }
-        if (!str_starts_with(expected_type, "vec<") || !str_eq(str_slice(expected_type, str_len(expected_type) - 1, str_len(expected_type)), ">")) {
+        if (!str_starts_with(expected_type, "vec<") || !str_ends_with(expected_type, ">")) {
             checker_error_at(expr.file, expr.line, expr.column, "cannot infer type for vec_new");
         }
         return expected_type;
@@ -615,7 +624,7 @@ fn infer_vec_intrinsic_call(expr: ParseNode, symbols: SymbolTables, stack: Scope
             checker_error_at(expr.file, expr.line, expr.column, "vec_len expects 1 argument");
         }
         let arg_type : str = infer_expr_type(vec_get(expr.children, 0), symbols, stack);
-        if (!str_starts_with(arg_type, "vec<") || !str_eq(str_slice(arg_type, str_len(arg_type) - 1, str_len(arg_type)), ">")) {
+        if (!str_starts_with(arg_type, "vec<") || !str_ends_with(arg_type, ">")) {
             checker_error_at(expr.file, expr.line, expr.column, "vec_len argument must be a vector");
         }
         return "int";
@@ -624,7 +633,7 @@ fn infer_vec_intrinsic_call(expr: ParseNode, symbols: SymbolTables, stack: Scope
             checker_error_at(expr.file, expr.line, expr.column, "vec_push expects 2 arguments");
         }
         let vec_arg_type : str = infer_expr_type(vec_get(expr.children, 0), symbols, stack);
-        if (!str_starts_with(vec_arg_type, "vec<") || !str_eq(str_slice(vec_arg_type, str_len(vec_arg_type) - 1, str_len(vec_arg_type)), ">")) {
+        if (!str_starts_with(vec_arg_type, "vec<") || !str_ends_with(vec_arg_type, ">")) {
             checker_error_at(expr.file, expr.line, expr.column, "first argument of vec_push must be a vector");
         }
         let elem_type : str = str_slice(vec_arg_type, 4, str_len(vec_arg_type) - 1);
@@ -635,7 +644,7 @@ fn infer_vec_intrinsic_call(expr: ParseNode, symbols: SymbolTables, stack: Scope
             checker_error_at(expr.file, expr.line, expr.column, "vec_get expects 2 arguments");
         }
         let vec_arg_type : str = infer_expr_type(vec_get(expr.children, 0), symbols, stack);
-        if (!str_starts_with(vec_arg_type, "vec<") || !str_eq(str_slice(vec_arg_type, str_len(vec_arg_type) - 1, str_len(vec_arg_type)), ">")) {
+        if (!str_starts_with(vec_arg_type, "vec<") || !str_ends_with(vec_arg_type, ">")) {
             checker_error_at(expr.file, expr.line, expr.column, "first argument of vec_get must be a vector");
         }
         let elem_type : str = str_slice(vec_arg_type, 4, str_len(vec_arg_type) - 1);
@@ -646,7 +655,7 @@ fn infer_vec_intrinsic_call(expr: ParseNode, symbols: SymbolTables, stack: Scope
             checker_error_at(expr.file, expr.line, expr.column, "vec_set expects 3 arguments");
         }
         let vec_arg_type : str = infer_expr_type(vec_get(expr.children, 0), symbols, stack);
-        if (!str_starts_with(vec_arg_type, "vec<") || !str_eq(str_slice(vec_arg_type, str_len(vec_arg_type) - 1, str_len(vec_arg_type)), ">")) {
+        if (!str_starts_with(vec_arg_type, "vec<") || !str_ends_with(vec_arg_type, ">")) {
             checker_error_at(expr.file, expr.line, expr.column, "first argument of vec_set must be a vector");
         }
         let elem_type : str = str_slice(vec_arg_type, 4, str_len(vec_arg_type) - 1);

@@ -1,0 +1,9 @@
+fn before() : str {
+    return "before";
+}
+
+import "helper.nv";
+
+fn main() : void {
+    print_str(before() + ":" + helper());
+}

@@ -2,6 +2,5 @@ import "a.nv";
 import "b.nv";
 
 fn main() : void {
-    print_int(value());
-    return;
+    print_str(a() + ":" + b());
 }

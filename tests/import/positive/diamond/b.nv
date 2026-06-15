@@ -1,1 +1,5 @@
-import "common.nv";
+import "./shared.nv";
+
+fn b() : str {
+    return shared();
+}

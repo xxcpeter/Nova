@@ -7,7 +7,11 @@ if(NOT DEFINED CC)
 endif()
 
 # Make a per-test working directory under the CTest binary dir.
-get_filename_component(test_name "${INPUT}" NAME_WE)
+if(DEFINED TEST_NAME)
+    set(test_name "${TEST_NAME}")
+else()
+    get_filename_component(test_name "${INPUT}" NAME_WE)
+endif()
 set(work_dir "${CMAKE_CURRENT_BINARY_DIR}/codegen_tests/${test_name}")
 file(MAKE_DIRECTORY "${work_dir}")
 

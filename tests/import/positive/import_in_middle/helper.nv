@@ -1,0 +1,3 @@
+fn helper() : str {
+    return "helper";
+}

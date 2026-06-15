@@ -191,6 +191,7 @@ function(add_codegen_positive_test name)
             -DINPUT=${CMAKE_CURRENT_SOURCE_DIR}/tests/codegen/positive/${name}.nv
             -DEXPECT=${CMAKE_CURRENT_SOURCE_DIR}/tests/codegen/positive/${name}.out
             -DRUNTIME_DIR=${CMAKE_CURRENT_SOURCE_DIR}/runtime
+            -DTEST_NAME=codegen_positive_${name}
             -DCC=cc
             -P ${CODEGEN_TEST_DRIVER}
     )
@@ -413,6 +414,7 @@ function(add_import_codegen_positive_test name)
             -DINPUT=${CMAKE_CURRENT_SOURCE_DIR}/tests/import/positive/${name}/main.nv
             -DEXPECT=${CMAKE_CURRENT_SOURCE_DIR}/tests/import/positive/${name}/main.out
             -DRUNTIME_DIR=${CMAKE_CURRENT_SOURCE_DIR}/runtime
+            -DTEST_NAME=import_codegen_positive_${name}
             -DCC=cc
             -P ${CODEGEN_TEST_DRIVER}
     )
@@ -439,8 +441,8 @@ function(add_nova_frontend_import_check_test name)
         COMMAND ${CMAKE_COMMAND}
             -DNOVA_COMPILE=$<TARGET_FILE:nova_compile>
             -DTOOL_SOURCE=${CMAKE_CURRENT_SOURCE_DIR}/tools/nova_frontend.nv
-            -DINPUT=${CMAKE_CURRENT_SOURCE_DIR}/tests/tools/frontend_import/check/${name}/main.nv
-            -DEXPECT=${CMAKE_CURRENT_SOURCE_DIR}/tests/tools/frontend_import/check/${name}/main.check
+            -DINPUT=${CMAKE_CURRENT_SOURCE_DIR}/tests/tools/frontend_import/positive/check/${name}/main.nv
+            -DEXPECT=${CMAKE_CURRENT_SOURCE_DIR}/tests/tools/frontend_import/positive/check/${name}/main.check
             -DRUNTIME_DIR=${CMAKE_CURRENT_SOURCE_DIR}/runtime
             -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/nova_tool_tests/frontend_import_check_${name}
             -DCC=cc
@@ -448,6 +450,24 @@ function(add_nova_frontend_import_check_test name)
             -P ${NOVA_TOOL_TEST_DRIVER}
     )
     set_tests_properties(nova_tool_frontend_import_check_${name} PROPERTIES LABELS "nova_tool;frontend;import;check")
+endfunction()
+
+function(add_nova_frontend_import_check_negative_test name)
+    add_test(
+        NAME nova_tool_frontend_import_check_negative_${name}
+        COMMAND ${CMAKE_COMMAND}
+            -DNOVA_COMPILE=$<TARGET_FILE:nova_compile>
+            -DTOOL_SOURCE=${CMAKE_CURRENT_SOURCE_DIR}/tools/nova_frontend.nv
+            -DINPUT=${CMAKE_CURRENT_SOURCE_DIR}/tests/tools/frontend_import/negative/check/${name}/main.nv
+            -DEXPECT=${CMAKE_CURRENT_SOURCE_DIR}/tests/tools/frontend_import/negative/check/${name}/main.err
+            -DRUNTIME_DIR=${CMAKE_CURRENT_SOURCE_DIR}/runtime
+            -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/nova_tool_tests/frontend_import_check_negative_${name}
+            -DSTRIP_RUNTIME_PREFIX=ON
+            -DCC=cc
+            -DTOOL_ARGS=check
+            -P ${NOVA_TOOL_NEGATIVE_TEST_DRIVER}
+    )
+    set_tests_properties(nova_tool_frontend_import_check_negative_${name} PROPERTIES LABELS "nova_tool;frontend;import;check;negative")
 endfunction()
 
 function(add_nova_codegen_tool_test name)
@@ -558,10 +578,6 @@ add_codegen_positive_test(int_to_str_and_concat)
 add_codegen_positive_test(buffer_builder)
 add_codegen_positive_test(buffer_two_buffers)
 add_codegen_positive_test(file_roundtrip)
-add_codegen_positive_test(str_vec_basic)
-add_codegen_positive_test(str_vec_two_vectors)
-add_codegen_positive_test(str_vec_empty_len)
-add_codegen_positive_test(str_vec_with_buffer)
 
 # step 7
 add_nova_lexer_tool_test(basic)
@@ -761,4 +777,14 @@ add_nova_typecheck_negative_test(missing_return)
 # step 23
 add_import_negative_test(source_location_parse)
 add_import_sema_negative_test(source_location_sema)
-# add_nova_frontend_import_check_test(source_location)
+add_nova_frontend_import_check_negative_test(source_location)
+
+# step 24
+add_import_codegen_positive_test(duplicate_same_file)
+add_import_codegen_positive_test(duplicate_parent_path)
+add_import_codegen_positive_test(nested_relative)
+add_import_codegen_positive_test(import_in_middle)
+
+add_codegen_positive_test(string_ends_with)
+add_nova_typecheck_positive_test(string_ends_with)
+add_nova_codegen_tool_test(string_ends_with)

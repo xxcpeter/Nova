@@ -1,3 +1,0 @@
-fn value() : int {
-    return 42;
-}

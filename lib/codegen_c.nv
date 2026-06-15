@@ -105,7 +105,7 @@ fn gen_c_type_at(type_name: str, symbols: CodegenSymbols, file: str, line: int, 
         return type_name;
     } else if (codegen_has_enum(symbols, type_name)) {
         return type_name;
-    } else if (str_starts_with(type_name, "vec<") && str_eq(str_slice(type_name, str_len(type_name) - 1, str_len(type_name)), ">")) {
+    } else if (str_starts_with(type_name, "vec<") && str_ends_with(type_name, ">")) {
         return c_vec_type_name(type_name) + "*";
     } else {
         codegen_error_at(file, line, column, "unsupported type in codegen: " + type_name);
@@ -156,6 +156,9 @@ fn infer_runtime_call_type(name: str) : str {
         return "str";
     }
     if (str_eq(name, "str_starts_with")) {
+        return "bool";
+    }
+    if (str_eq(name, "str_ends_with")) {
         return "bool";
     }
     if (str_eq(name, "str_contains")) {
@@ -270,7 +273,7 @@ fn infer_codegen_expr_type(expr: ParseNode, symbols: CodegenSymbols, scope: Code
         if (str_eq(expr.name, "vec_get")) {
             let vec_expr : ParseNode = vec_get(expr.children, 0);
             let vec_type : str = infer_codegen_expr_type(vec_expr, symbols, scope);
-            if (str_starts_with(vec_type, "vec<") && str_eq(str_slice(vec_type, str_len(vec_type) - 1, str_len(vec_type)), ">")) {
+            if (str_starts_with(vec_type, "vec<") && str_ends_with(vec_type, ">")) {
                 return nova_vec_elem_type(vec_type);
             }
             codegen_error_at(expr.file, expr.line, expr.column, "vec_get called on non-vector expression of type " + vec_type);
@@ -541,7 +544,7 @@ fn gen_c_function(out: int, func: ParseNode, is_prototype: bool, symbols: Codege
 fn collect_vec_types_tree(node: ParseNode, symbols: CodegenSymbols) : void {
     if (node.kind == ParseNodeKind.ParamDecl || node.kind == ParseNodeKind.FieldDecl || 
         node.kind == ParseNodeKind.FunctionDecl || node.kind == ParseNodeKind.LetStmt) {
-        if (str_starts_with(node.value, "vec<") && str_eq(str_slice(node.value, str_len(node.value) - 1, str_len(node.value)), ">")) {
+        if (str_starts_with(node.value, "vec<") && str_ends_with(node.value, ">")) {
             if (!vec_str_contains(symbols.vec_types, node.value)) {
                 vec_push(symbols.vec_types, node.value);
             }

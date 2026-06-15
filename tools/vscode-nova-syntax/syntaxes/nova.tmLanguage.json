@@ -121,7 +121,7 @@
       "patterns": [
         {
           "name": "support.function.runtime.nova",
-          "match": "\\b(print_int|print_str|str_eq|str_concat|str_len|str_get|str_slice|str_starts_with|str_contains|int_to_str|read_file|write_file|buf_new|buf_push_str|buf_push_int|buf_to_str|arg_count|arg_get|nova_runtime_error)\\b"
+          "match": "\\b(print_int|print_str|str_eq|str_concat|str_len|str_get|str_slice|str_starts_with|str_ends_with|str_contains|int_to_str|read_file|write_file|buf_new|buf_push_str|buf_push_int|buf_to_str|arg_count|arg_get|nova_runtime_error)\\b"
         },
         {
           "name": "support.function.vector.nova",

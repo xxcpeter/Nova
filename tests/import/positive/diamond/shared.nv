@@ -1,0 +1,3 @@
+fn shared() : str {
+    return "shared";
+}

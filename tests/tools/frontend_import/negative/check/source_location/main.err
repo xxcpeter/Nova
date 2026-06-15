@@ -1,0 +1,1 @@
+tests/tools/frontend_import/negative/check/source_location/bad.nv:2:19: CheckerError: type error in variable declaration: expected 'int', got 'str'

@@ -1,0 +1,7 @@
+fn main() : void {
+    if (str_ends_with("nova.nv", ".nv")) {
+        print_str("yes");
+    } else {
+        print_str("no");
+    }
+}

@@ -1,0 +1,6 @@
+import "a.nv";
+import "./a.nv";
+
+fn main() : void {
+    print_str(message());
+}

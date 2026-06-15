@@ -4,14 +4,10 @@
 #include <string.h>
 
 #define MAX_BUFFERS 1024
-#define MAX_STR_VECS 1024
 
 
 static int buffer_count = 0;
 static char* buffers[MAX_BUFFERS];
-static int str_vec_count = 0;
-static char** str_vecs[MAX_STR_VECS];
-static int str_vec_lengths[MAX_STR_VECS];
 
 static int rt_argc;
 static char** rt_argv;
@@ -54,12 +50,6 @@ static char* rt_strdup(const char* s) {
 static void check_buffer_id(int buf) {
     if (buf < 0 || buf >= buffer_count || !buffers[buf]) {
         runtime_error("invalid buffer handle");
-    }
-}
-
-static void check_str_vec_id(int vec) {
-    if (vec < 0 || vec >= str_vec_count || !str_vecs[vec]) {
-        runtime_error("invalid string vector handle");
     }
 }
     
@@ -116,6 +106,16 @@ const char* str_slice(const char* s, int start, int end) {
 
 bool str_starts_with(const char* s, const char* prefix) {
     return strncmp(s, prefix, strlen(prefix)) == 0;
+}
+
+
+bool str_ends_with(const char* s, const char* suffix) {
+    size_t len_s = strlen(s);
+    size_t len_suffix = strlen(suffix);
+    if (len_suffix > len_s) {
+        return false;
+    }
+    return strncmp(s + len_s - len_suffix, suffix, len_suffix) == 0;
 }
 
 
@@ -207,40 +207,6 @@ void buf_push_int(int buf, int x) {
 const char* buf_to_str(int buf) {
     check_buffer_id(buf);
     return buffers[buf];
-}
-
-
-int str_vec_new() {
-    if (str_vec_count >= MAX_STR_VECS) {
-        runtime_error("too many string vectors");
-    }
-    str_vecs[str_vec_count] = rt_malloc(sizeof(char*));
-    str_vec_count++;
-    return str_vec_count - 1;
-}
-
-
-void str_vec_push(int vec, const char* s) {
-    check_str_vec_id(vec);
-    int len = str_vec_len(vec);
-    str_vecs[vec] = rt_realloc(str_vecs[vec], (len + 1) * sizeof(char*));
-    str_vecs[vec][len] = rt_strdup(s);
-    str_vec_lengths[vec] = len + 1;
-}
-
-
-const char* str_vec_get(int vec, int index) {
-    check_str_vec_id(vec);
-    if (index < 0 || index >= str_vec_len(vec)) {
-        runtime_error("string vector index out of bounds");
-    }
-    return str_vecs[vec][index];
-}
-
-
-int str_vec_len(int vec) {
-    check_str_vec_id(vec);
-    return str_vec_lengths[vec];
 }
 
 
