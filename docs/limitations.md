@@ -60,3 +60,12 @@ This document records known limitations of the current Phase 1 bootstrap prototy
 - Some early goals were revised, merged, or replaced in later steps.
 - The final implementation may differ from earlier step goals.
 - The current project behavior is defined by the source tree, tests, and current documentation.
+
+---
+
+## Self-hosting status
+
+- Nova has a repeatable self-hosted codegen workflow through `scripts/self_host.sh`.
+- The workflow builds stage0, stage1, and stage2 versions of `nova_codegen` and validates stage1/stage2 behavior on representative programs.
+- Nova is not yet fully self-hosting because the C++ seed compiler is still used to produce stage0, and the canonical build driver is currently a shell script rather than a Nova program.
+- A Nova-written build driver is deferred until the runtime supports process execution and filesystem directory management.

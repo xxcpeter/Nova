@@ -288,3 +288,23 @@ The Phase 1 bootstrap prototype proves:
 ```
 
 This is not yet full self-hosting, but it is a working bootstrap foundation.
+
+## Self-hosted codegen workflow
+
+Run:
+
+```bash
+scripts/self_host.sh
+```
+
+This script builds:
+
+```text
+C++ seed compiler -> stage0 nova_codegen
+stage0 nova_codegen -> stage1 nova_codegen
+stage1 nova_codegen -> stage2 nova_codegen
+```
+
+It then uses stage1 and stage2 codegen to compile representative Nova programs and compares their outputs.
+
+A successful run demonstrates that Nova's code generator can participate in a repeatable self-hosting workflow.

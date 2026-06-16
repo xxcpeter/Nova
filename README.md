@@ -53,9 +53,22 @@ cc /tmp/hello.c runtime/nova_runtime.c -I runtime -o /tmp/hello
 /tmp/hello
 ```
 
+## Self-hosting smoke test
+
+After building the project, run:
+
+```bash
+scripts/self_host.sh
+```
+
+This builds stage0, stage1, and stage2 versions of `nova_codegen`, then checks representative generated programs.
+
+For more details, see `docs/bootstrap.md`.
+
 ## Documentation
 
 * [Architecture](docs/architecture.md)
+* [Standard Library](docs/standard_library.md)
 * [Bootstrap demo](docs/bootstrap.md)
 * [Testing guide](docs/testing.md)
 * [Limitations](docs/limitations.md)

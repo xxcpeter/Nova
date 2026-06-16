@@ -788,3 +788,10 @@ add_import_codegen_positive_test(import_in_middle)
 add_codegen_positive_test(string_ends_with)
 add_nova_typecheck_positive_test(string_ends_with)
 add_nova_codegen_tool_test(string_ends_with)
+
+# step 25
+add_test(
+    NAME self_host_stage_codegen
+    COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/scripts/self_host.sh
+)
+set_tests_properties(self_host_stage_codegen PROPERTIES LABELS "selfhost;codegen")
