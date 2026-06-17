@@ -1,0 +1,47 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Nova: Configure",
+      "type": "shell",
+      "command": "cmake -S . -B build",
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
+      "label": "Nova: Build",
+      "type": "shell",
+      "command": "cmake --build build --parallel",
+      "group": "build",
+      "problemMatcher": "$nova"
+    },
+    {
+      "label": "Nova: Test",
+      "type": "shell",
+      "command": "ctest --test-dir build -j8 --output-on-failure",
+      "group": "test",
+      "problemMatcher": "$nova"
+    },
+    {
+      "label": "Nova: Self-host",
+      "type": "shell",
+      "command": "scripts/self_host.sh",
+      "group": "build",
+      "problemMatcher": "$nova"
+    },
+    {
+      "label": "Nova: Check current file",
+      "type": "shell",
+      "command": "build/nova_sema \"${file}\"",
+      "group": "build",
+      "problemMatcher": "$nova"
+    },
+    {
+      "label": "Nova: Compile current file",
+      "type": "shell",
+      "command": "build/nova_compile \"${file}\" /tmp/nova_current.generated.c && cc /tmp/nova_current.generated.c runtime/nova_runtime.c -I runtime -o /tmp/nova_current",
+      "group": "build",
+      "problemMatcher": "$nova"
+    }
+  ]
+}

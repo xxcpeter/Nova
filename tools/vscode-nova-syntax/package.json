@@ -1,7 +1,7 @@
 {
   "name": "vscode-nova-syntax",
   "displayName": "Nova Syntax",
-  "description": "Syntax highlighting for the Nova programming language.",
+  "description": "Syntax highlighting and basic editor support for the Nova programming language.",
   "version": "0.1.0",
   "publisher": "nova",
   "engines": {
@@ -29,6 +29,30 @@
         "language": "nova",
         "scopeName": "source.nova",
         "path": "./syntaxes/nova.tmLanguage.json"
+      }
+    ],
+    "snippets": [
+      {
+        "language": "nova",
+        "path": "./snippets/nova.code-snippets"
+      }
+    ],
+    "problemMatchers": [
+      {
+        "name": "nova",
+        "owner": "nova",
+        "fileLocation": [
+          "relative",
+          "${workspaceFolder}"
+        ],
+        "pattern": {
+          "regexp": "^(.*\\.nv):(\\d+):(\\d+):\\s+([A-Za-z]+Error):\\s+(.*)$",
+          "file": 1,
+          "line": 2,
+          "column": 3,
+          "code": 4,
+          "message": 5
+        }
       }
     ]
   }

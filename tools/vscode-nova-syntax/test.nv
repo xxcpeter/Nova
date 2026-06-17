@@ -1,5 +1,8 @@
 import "../lib/tokenizer.nv";
 
+// This file is for manual VS Code syntax testing.
+/* Block comments should also highlight. */
+
 enum Color {
     Red;
     Green;
@@ -24,6 +27,12 @@ fn main() : void {
     if (c == Color.Red && vec_len(xs) > 0) {
         print_int(vec_get(xs, 0));
         print_str("color=" + "red");
+    } else {
+        nova_runtime_error("unexpected color");
+    }
+
+    while (vec_len(xs) < 3) {
+        vec_push(xs, vec_len(xs));
     }
 
     return;

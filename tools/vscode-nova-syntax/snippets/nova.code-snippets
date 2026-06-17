@@ -1,0 +1,102 @@
+{
+  "Function": {
+    "prefix": "fn",
+    "body": [
+      "fn ${1:name}(${2}) : ${3:void} {",
+      "    ${0:return;}",
+      "}"
+    ],
+    "description": "Nova function declaration"
+  },
+  "Main function": {
+    "prefix": "main",
+    "body": [
+      "fn main() : void {",
+      "    ${0:return;}",
+      "}"
+    ],
+    "description": "Nova main function"
+  },
+  "Let binding": {
+    "prefix": "let",
+    "body": [
+      "let ${1:name} : ${2:int} = ${3:value};"
+    ],
+    "description": "Nova let declaration"
+  },
+  "If statement": {
+    "prefix": "if",
+    "body": [
+      "if (${1:condition}) {",
+      "    ${0}",
+      "}"
+    ],
+    "description": "Nova if statement"
+  },
+  "If else statement": {
+    "prefix": "ifelse",
+    "body": [
+      "if (${1:condition}) {",
+      "    ${2}",
+      "} else {",
+      "    ${0}",
+      "}"
+    ],
+    "description": "Nova if/else statement"
+  },
+  "While loop": {
+    "prefix": "while",
+    "body": [
+      "while (${1:condition}) {",
+      "    ${0}",
+      "}"
+    ],
+    "description": "Nova while loop"
+  },
+  "Struct declaration": {
+    "prefix": "struct",
+    "body": [
+      "struct ${1:Name} {",
+      "    ${2:field}: ${3:int};",
+      "}"
+    ],
+    "description": "Nova struct declaration"
+  },
+  "Enum declaration": {
+    "prefix": "enum",
+    "body": [
+      "enum ${1:Name} {",
+      "    ${2:Member};",
+      "}"
+    ],
+    "description": "Nova enum declaration"
+  },
+  "Import": {
+    "prefix": "import",
+    "body": [
+      "import \"${1:path}.nv\";"
+    ],
+    "description": "Nova import directive"
+  },
+  "Vector": {
+    "prefix": "vec",
+    "body": [
+      "let ${1:xs} : vec<${2:int}> = vec_new();"
+    ],
+    "description": "Nova typed vector declaration"
+  },
+  "Print string": {
+    "prefix": "prints",
+    "body": [
+      "print_str(${1:\"message\"});"
+    ],
+    "description": "Print a string"
+  },
+  "Print int": {
+    "prefix": "printi",
+    "body": [
+      "print_int(${1:value});"
+    ],
+    "description": "Print an integer"
+  }
+}
