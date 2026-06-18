@@ -3,4 +3,6 @@ Program
     Param name=x type=int
     Block
       LetStmt name=y type=int
-      ReturnStmt value
+        IdentifierExpr name=x
+      ReturnStmt
+        IdentifierExpr name=y

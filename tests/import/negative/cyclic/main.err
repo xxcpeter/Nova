@@ -1,1 +1,1 @@
-ImportError: cyclic import involving 'a.nv'
+tests/import/negative/cyclic/b.nv:1:9: ImportError: cyclic import involving 'a.nv'

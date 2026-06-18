@@ -72,7 +72,7 @@ fn find_struct(symbols: SymbolTables, name: str) : StructInfo {
         i = i + 1;
     }
     // should never reach here if caller checks has_struct first
-    checker_error("internal error: struct '" + name + "' not found in symbol table");
+    checker_internal_error("internal error: struct '" + name + "' not found in symbol table");
 }
 
 fn has_enum(symbols: SymbolTables, name: str) : bool {
@@ -97,7 +97,7 @@ fn find_enum(symbols: SymbolTables, name: str) : EnumInfo {
         i = i + 1;
     }
     // should never reach here if caller checks has_enum first
-    checker_error("internal error: enum '" + name + "' not found in symbol table");
+    checker_internal_error("internal error: enum '" + name + "' not found in symbol table");
 }
 
 fn has_function(symbols: SymbolTables, name: str) : bool {
@@ -122,7 +122,7 @@ fn find_function(symbols: SymbolTables, name: str) : FunctionInfo {
         i = i + 1;
     }
     // should never reach here if caller checks has_function first
-    checker_error("internal error: function '" + name + "' not found in symbol table");
+    checker_internal_error("internal error: function '" + name + "' not found in symbol table");
 }
 
 fn func_has_param(info: FunctionInfo, param_name: str) : bool {
@@ -159,7 +159,7 @@ fn struct_field_type(info: StructInfo, field_name: str) : str {
         i = i + 1;
     }
     // should never reach here if caller checks struct_has_field first
-    checker_error("internal error: field '" + field_name + "' not found in struct '" + info.name + "'");
+    checker_internal_error("internal error: field '" + field_name + "' not found in struct '" + info.name + "'");
 }
 
 fn enum_has_member(info: EnumInfo, member_name: str) : bool {
@@ -259,7 +259,7 @@ fn push_scope(stack: ScopeStack) : ScopeStack {
 
 fn pop_scope(stack: ScopeStack) : ScopeStack {
     if (vec_len(stack.scopes) == 0) {
-        checker_error("internal error: cannot pop from empty scope stack");
+        checker_internal_error("internal error: cannot pop from empty scope stack");
     }
     // no vec_pop function
     let new_scopes : vec<Scope> = vec_new();
@@ -285,7 +285,7 @@ fn is_in_scope(scope: Scope, var_name: str) : bool {
 
 fn declare_var(stack: ScopeStack, var_name: str, type_name: str, file: str, line: int, column: int) : ScopeStack {
     if (vec_len(stack.scopes) == 0) {
-        checker_error("internal error: no scope to declare variable in");
+        checker_internal_error("internal error: no scope to declare variable in");
     }
     let current_scope : Scope = vec_get(stack.scopes, vec_len(stack.scopes) - 1);
     if (is_in_scope(current_scope, var_name)) {
@@ -322,7 +322,7 @@ fn resolve_var_type(stack: ScopeStack, name: str, line: int, column: int) : str 
         i = i - 1;
     }
     // should never reach here if caller checks has_var first
-    checker_error("internal error: variable '" + name + "' not found in any scope");
+    checker_internal_error("internal error: variable '" + name + "' not found in any scope");
 }
 
 fn check_struct_decl(node: ParseNode, symbols: SymbolTables) : void {
@@ -824,14 +824,13 @@ fn infer_expr_type_expected(expr: ParseNode, symbols: SymbolTables, stack: Scope
 }
 
 fn is_no_return_call_name(name: str) : bool {
-    return str_eq(name, "nova_runtime_error") || 
-           str_eq(name, "parser_error") ||
+    return str_eq(name, "nova_runtime_error") ||
+           str_eq(name, "lexer_error_at") ||
            str_eq(name, "parser_error_at") ||
-           str_eq(name, "checker_error") ||
+           str_eq(name, "checker_internal_error") ||
            str_eq(name, "checker_error_at") ||
-           str_eq(name, "codegen_error") ||
            str_eq(name, "codegen_error_at") ||
-           str_eq(name, "import_error");
+           str_eq(name, "import_error_at");
 }
 
 fn expr_is_no_return_call(expr: ParseNode) : bool {

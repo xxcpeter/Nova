@@ -1,1 +1,1 @@
-tests/parser/negative/missing_type_in_let.nv:2:13: ParseError: expected type after ':'
+tests/parser/negative/missing_type_in_let.nv:2:13: ParserError: expected type after ':'

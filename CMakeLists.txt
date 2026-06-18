@@ -95,95 +95,66 @@ target_compile_options(nova_compile
 
 enable_testing()
 
-set(TEXT_TEST_DRIVER ${CMAKE_CURRENT_SOURCE_DIR}/cmake/RunTextCompareTest.cmake)
-set(CODEGEN_TEST_DRIVER ${CMAKE_CURRENT_SOURCE_DIR}/cmake/RunCodegenTest.cmake)
-set(NOVA_TOOL_TEST_DRIVER ${CMAKE_CURRENT_SOURCE_DIR}/cmake/RunNovaToolTest.cmake)
-set(NOVA_TOOL_NEGATIVE_TEST_DRIVER ${CMAKE_CURRENT_SOURCE_DIR}/cmake/RunNovaToolNegativeTest.cmake)
-set(NOVA_CODEGEN_TOOL_TEST_DRIVER ${CMAKE_CURRENT_SOURCE_DIR}/cmake/RunNovaCodegenToolTest.cmake)
+set(NOVA_TEST_DRIVER_TEXT_COMPARE ${CMAKE_CURRENT_SOURCE_DIR}/cmake/RunTextCompareTest.cmake)
+set(NOVA_TEST_DRIVER_CODEGEN ${CMAKE_CURRENT_SOURCE_DIR}/cmake/RunCodegenTest.cmake)
+set(NOVA_TEST_DRIVER_TOOL ${CMAKE_CURRENT_SOURCE_DIR}/cmake/RunNovaToolTest.cmake)
+set(NOVA_TEST_DRIVER_TOOL_CODEGEN ${CMAKE_CURRENT_SOURCE_DIR}/cmake/RunNovaCodegenToolTest.cmake)
+
+function(add_nova_cpp_text_test component kind name ext stream)
+    if(component STREQUAL "lexer")
+        set(tool_target nova_lex)
+    elseif(component STREQUAL "parser")
+        set(tool_target nova_parse)
+    elseif(component STREQUAL "sema")
+        set(tool_target nova_sema)
+    else()
+        message(FATAL_ERROR "unknown C++ text test component: ${component}")
+    endif()
+
+    set(test_name ${component}_${kind}_${name})
+
+    add_test(
+        NAME ${test_name}
+        COMMAND ${CMAKE_COMMAND}
+            -DTOOL=$<TARGET_FILE:${tool_target}>
+            -DINPUT=${CMAKE_CURRENT_SOURCE_DIR}/tests/${component}/${kind}/${name}.nv
+            -DEXPECT=${CMAKE_CURRENT_SOURCE_DIR}/tests/${component}/${kind}/${name}.${ext}
+            -DMODE=${kind}
+            -DLABEL=${stream}
+            -P ${NOVA_TEST_DRIVER_TEXT_COMPARE}
+    )
+
+    set_tests_properties(
+        ${test_name}
+        PROPERTIES LABELS "${component};${kind}"
+    )
+endfunction()
 
 function(add_lexer_positive_test name)
-    add_test(
-        NAME lexer_positive_${name}
-        COMMAND ${CMAKE_COMMAND}
-            -DTOOL=$<TARGET_FILE:nova_lex>
-            -DINPUT=${CMAKE_CURRENT_SOURCE_DIR}/tests/lexer/positive/${name}.nv
-            -DEXPECT=${CMAKE_CURRENT_SOURCE_DIR}/tests/lexer/positive/${name}.out
-            -DMODE=positive
-            -P ${TEXT_TEST_DRIVER}
-    )
-    set_tests_properties(lexer_positive_${name} PROPERTIES LABELS "lexer;positive")
+    add_nova_cpp_text_test(lexer positive ${name} out stdout)
 endfunction()
 
 function(add_lexer_negative_test name)
-    add_test(
-        NAME lexer_negative_${name}
-        COMMAND ${CMAKE_COMMAND}
-            -DTOOL=$<TARGET_FILE:nova_lex>
-            -DINPUT=${CMAKE_CURRENT_SOURCE_DIR}/tests/lexer/negative/${name}.nv
-            -DEXPECT=${CMAKE_CURRENT_SOURCE_DIR}/tests/lexer/negative/${name}.err
-            -DMODE=negative
-            -P ${TEXT_TEST_DRIVER}
-    )
-    set_tests_properties(lexer_negative_${name} PROPERTIES LABELS "lexer;negative")
+    add_nova_cpp_text_test(lexer negative ${name} err stderr)
 endfunction()
 
 function(add_parser_positive_test name)
-    add_test(
-        NAME parser_positive_${name}
-        COMMAND ${CMAKE_COMMAND}
-            -DTOOL=$<TARGET_FILE:nova_parse>
-            -DINPUT=${CMAKE_CURRENT_SOURCE_DIR}/tests/parser/positive/${name}.nv
-            -DEXPECT=${CMAKE_CURRENT_SOURCE_DIR}/tests/parser/positive/${name}.out
-            -DMODE=positive
-            -DLABEL=stdout
-            -P ${TEXT_TEST_DRIVER}
-    )
-    set_tests_properties(parser_positive_${name} PROPERTIES LABELS "parser;positive")
+    add_nova_cpp_text_test(parser positive ${name} out stdout)
 endfunction()
 
 function(add_parser_negative_test name)
-    add_test(
-        NAME parser_negative_${name}
-        COMMAND ${CMAKE_COMMAND}
-            -DTOOL=$<TARGET_FILE:nova_parse>
-            -DINPUT=${CMAKE_CURRENT_SOURCE_DIR}/tests/parser/negative/${name}.nv
-            -DEXPECT=${CMAKE_CURRENT_SOURCE_DIR}/tests/parser/negative/${name}.err
-            -DMODE=negative
-            -DLABEL=stderr
-            -P ${TEXT_TEST_DRIVER}
-    )
-    set_tests_properties(parser_negative_${name} PROPERTIES LABELS "parser;negative")
+    add_nova_cpp_text_test(parser negative ${name} err stderr)
 endfunction()
 
 function(add_sema_positive_test name)
-    add_test(
-        NAME sema_positive_${name}
-        COMMAND ${CMAKE_COMMAND}
-            -DTOOL=$<TARGET_FILE:nova_sema>
-            -DINPUT=${CMAKE_CURRENT_SOURCE_DIR}/tests/sema/positive/${name}.nv
-            -DEXPECT=${CMAKE_CURRENT_SOURCE_DIR}/tests/sema/positive/${name}.out
-            -DMODE=positive
-            -DLABEL=stdout
-            -P ${TEXT_TEST_DRIVER}
-    )
-    set_tests_properties(sema_positive_${name} PROPERTIES LABELS "sema;positive")
+    add_nova_cpp_text_test(sema positive ${name} out stdout)
 endfunction()
 
 function(add_sema_negative_test name)
-    add_test(
-        NAME sema_negative_${name}
-        COMMAND ${CMAKE_COMMAND}
-            -DTOOL=$<TARGET_FILE:nova_sema>
-            -DINPUT=${CMAKE_CURRENT_SOURCE_DIR}/tests/sema/negative/${name}.nv
-            -DEXPECT=${CMAKE_CURRENT_SOURCE_DIR}/tests/sema/negative/${name}.err
-            -DMODE=negative
-            -DLABEL=stderr
-            -P ${TEXT_TEST_DRIVER}
-    )
-    set_tests_properties(sema_negative_${name} PROPERTIES LABELS "sema;negative")
+    add_nova_cpp_text_test(sema negative ${name} err stderr)
 endfunction()
 
-function(add_codegen_positive_test name)
+function(add_nova_cpp_codegen_positive_test name)
     add_test(
         NAME codegen_positive_${name}
         COMMAND ${CMAKE_COMMAND}
@@ -193,199 +164,112 @@ function(add_codegen_positive_test name)
             -DRUNTIME_DIR=${CMAKE_CURRENT_SOURCE_DIR}/runtime
             -DTEST_NAME=codegen_positive_${name}
             -DCC=cc
-            -P ${CODEGEN_TEST_DRIVER}
+            -P ${NOVA_TEST_DRIVER_CODEGEN}
     )
     set_tests_properties(codegen_positive_${name} PROPERTIES LABELS "codegen;positive")
 endfunction()
 
-function(add_nova_lexer_tool_test name)
+function(add_nova_tool_test group kind tool name ext)
+    set(test_name nova_tool_${group}_${kind}_${name})
+
+    set(expect_failure OFF)
+    set(strip_runtime_prefix OFF)
+
+    if(kind STREQUAL "negative")
+        set(expect_failure ON)
+        set(strip_runtime_prefix ON)
+    endif()
+
     add_test(
-        NAME nova_tool_lexer_${name}
+        NAME ${test_name}
         COMMAND ${CMAKE_COMMAND}
             -DNOVA_COMPILE=$<TARGET_FILE:nova_compile>
-            -DTOOL_SOURCE=${CMAKE_CURRENT_SOURCE_DIR}/tools/nova_lexer.nv
-            -DINPUT=${CMAKE_CURRENT_SOURCE_DIR}/tests/tools/lexer/${name}.nv
-            -DEXPECT=${CMAKE_CURRENT_SOURCE_DIR}/tests/tools/lexer/${name}.tok
+            -DTOOL_SOURCE=${CMAKE_CURRENT_SOURCE_DIR}/tools/${tool}.nv
+            -DINPUT=${CMAKE_CURRENT_SOURCE_DIR}/tests/tools/${group}/${kind}/${name}.nv
+            -DEXPECT=${CMAKE_CURRENT_SOURCE_DIR}/tests/tools/${group}/${kind}/${name}.${ext}
             -DRUNTIME_DIR=${CMAKE_CURRENT_SOURCE_DIR}/runtime
-            -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/nova_tool_tests/lexer_${name}
+            -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/nova_tool_tests/${group}_${kind}_${name}
             -DCC=cc
-            -P ${NOVA_TOOL_TEST_DRIVER}
+            -DMODE=${kind}
+            -DEXPECT_FAILURE=${expect_failure}
+            -DSTRIP_RUNTIME_PREFIX=${strip_runtime_prefix}
+            -P ${NOVA_TEST_DRIVER_TOOL}
     )
-    set_tests_properties(nova_tool_lexer_${name} PROPERTIES LABELS "nova_tool;lexer")
+
+    set_tests_properties(
+        ${test_name}
+        PROPERTIES LABELS "nova_tool;${group};${kind}"
+    )
 endfunction()
 
 function(add_nova_tokenizer_tool_test name)
-    add_test(
-        NAME nova_tool_tokenizer_${name}
-        COMMAND ${CMAKE_COMMAND}
-            -DNOVA_COMPILE=$<TARGET_FILE:nova_compile>
-            -DTOOL_SOURCE=${CMAKE_CURRENT_SOURCE_DIR}/tools/nova_tokenizer.nv
-            -DINPUT=${CMAKE_CURRENT_SOURCE_DIR}/tests/tools/tokenizer/${name}.nv
-            -DEXPECT=${CMAKE_CURRENT_SOURCE_DIR}/tests/tools/tokenizer/${name}.tok
-            -DRUNTIME_DIR=${CMAKE_CURRENT_SOURCE_DIR}/runtime
-            -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/nova_tool_tests/tokenizer_${name}
-            -DCC=cc
-            -P ${NOVA_TOOL_TEST_DRIVER}
-    )
-    set_tests_properties(nova_tool_tokenizer_${name} PROPERTIES LABELS "nova_tool;tokenizer")
+    add_nova_tool_test(tokenizer positive nova_tokenizer ${name} tok)
 endfunction()
 
 function(add_nova_parser_tool_test name)
-    add_test(
-        NAME nova_tool_parser_${name}
-        COMMAND ${CMAKE_COMMAND}
-            -DNOVA_COMPILE=$<TARGET_FILE:nova_compile>
-            -DTOOL_SOURCE=${CMAKE_CURRENT_SOURCE_DIR}/tools/nova_parser.nv
-            -DINPUT=${CMAKE_CURRENT_SOURCE_DIR}/tests/tools/parser/${name}.nv
-            -DEXPECT=${CMAKE_CURRENT_SOURCE_DIR}/tests/tools/parser/${name}.out
-            -DRUNTIME_DIR=${CMAKE_CURRENT_SOURCE_DIR}/runtime
-            -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/nova_tool_tests/parser_${name}
-            -DCC=cc
-            -P ${NOVA_TOOL_TEST_DRIVER}
-    )
-    set_tests_properties(nova_tool_parser_${name} PROPERTIES LABELS "nova_tool;parser")
+    add_nova_tool_test(parser positive nova_parser ${name} out)
+endfunction()
+
+function(add_nova_parser_negative_test name)
+    add_nova_tool_test(parser negative nova_parser ${name} err)
 endfunction()
 
 function(add_nova_checker_positive_test name)
-    add_test(
-        NAME nova_tool_checker_positive_${name}
-        COMMAND ${CMAKE_COMMAND}
-            -DNOVA_COMPILE=$<TARGET_FILE:nova_compile>
-            -DTOOL_SOURCE=${CMAKE_CURRENT_SOURCE_DIR}/tools/nova_checker.nv
-            -DINPUT=${CMAKE_CURRENT_SOURCE_DIR}/tests/tools/checker/positive/${name}.nv
-            -DEXPECT=${CMAKE_CURRENT_SOURCE_DIR}/tests/tools/checker/positive/${name}.out
-            -DRUNTIME_DIR=${CMAKE_CURRENT_SOURCE_DIR}/runtime
-            -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/nova_tool_tests/checker_positive_${name}
-            -DCC=cc
-            -P ${NOVA_TOOL_TEST_DRIVER}
-    )
-    set_tests_properties(nova_tool_checker_positive_${name} PROPERTIES LABELS "nova_tool;checker;positive")
+    add_nova_tool_test(checker positive nova_checker ${name} out)
 endfunction()
 
 function(add_nova_checker_negative_test name)
-    add_test(
-        NAME nova_tool_checker_negative_${name}
-        COMMAND ${CMAKE_COMMAND}
-            -DNOVA_COMPILE=$<TARGET_FILE:nova_compile>
-            -DTOOL_SOURCE=${CMAKE_CURRENT_SOURCE_DIR}/tools/nova_checker.nv
-            -DINPUT=${CMAKE_CURRENT_SOURCE_DIR}/tests/tools/checker/negative/${name}.nv
-            -DEXPECT=${CMAKE_CURRENT_SOURCE_DIR}/tests/tools/checker/negative/${name}.err
-            -DRUNTIME_DIR=${CMAKE_CURRENT_SOURCE_DIR}/runtime
-            -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/nova_tool_tests/checker_negative_${name}
-            -DSTRIP_RUNTIME_PREFIX=ON
-            -DCC=cc
-            -P ${NOVA_TOOL_NEGATIVE_TEST_DRIVER}
-    )
-    set_tests_properties(nova_tool_checker_negative_${name} PROPERTIES LABELS "nova_tool;checker;negative")
-endfunction()
-
-function(add_nova_expr_parser_tool_test name)
-    add_test(
-        NAME nova_tool_expr_parser_${name}
-        COMMAND ${CMAKE_COMMAND}
-            -DNOVA_COMPILE=$<TARGET_FILE:nova_compile>
-            -DTOOL_SOURCE=${CMAKE_CURRENT_SOURCE_DIR}/tools/nova_expr_parser.nv
-            -DINPUT=${CMAKE_CURRENT_SOURCE_DIR}/tests/tools/expr_parser/${name}.nv
-            -DEXPECT=${CMAKE_CURRENT_SOURCE_DIR}/tests/tools/expr_parser/${name}.out
-            -DRUNTIME_DIR=${CMAKE_CURRENT_SOURCE_DIR}/runtime
-            -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/nova_tool_tests/expr_parser_${name}
-            -DCC=cc
-            -P ${NOVA_TOOL_TEST_DRIVER}
-    )
-
-    set_tests_properties(
-        nova_tool_expr_parser_${name}
-        PROPERTIES LABELS "nova_tool;expr_parser"
-    )
-endfunction()
-
-function(add_nova_expr_parser_negative_test name)
-    add_test(
-        NAME nova_tool_expr_parser_negative_${name}
-        COMMAND ${CMAKE_COMMAND}
-            -DNOVA_COMPILE=$<TARGET_FILE:nova_compile>
-            -DTOOL_SOURCE=${CMAKE_CURRENT_SOURCE_DIR}/tools/nova_expr_parser.nv
-            -DINPUT=${CMAKE_CURRENT_SOURCE_DIR}/tests/tools/expr_parser/negative/${name}.nv
-            -DEXPECT=${CMAKE_CURRENT_SOURCE_DIR}/tests/tools/expr_parser/negative/${name}.err
-            -DRUNTIME_DIR=${CMAKE_CURRENT_SOURCE_DIR}/runtime
-            -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/nova_tool_tests/expr_parser_negative_${name}
-            -DSTRIP_RUNTIME_PREFIX=ON
-            -DCC=cc
-            -P ${NOVA_TOOL_NEGATIVE_TEST_DRIVER}
-    )
-
-    set_tests_properties(
-        nova_tool_expr_parser_negative_${name}
-        PROPERTIES LABELS "nova_tool;expr_parser;negative"
-    )
+    add_nova_tool_test(checker negative nova_checker ${name} err)
 endfunction()
 
 function(add_nova_typecheck_positive_test name)
-    add_test(
-        NAME nova_tool_typecheck_positive_${name}
-        COMMAND ${CMAKE_COMMAND}
-            -DNOVA_COMPILE=$<TARGET_FILE:nova_compile>
-            -DTOOL_SOURCE=${CMAKE_CURRENT_SOURCE_DIR}/tools/nova_checker.nv
-            -DINPUT=${CMAKE_CURRENT_SOURCE_DIR}/tests/tools/typecheck/positive/${name}.nv
-            -DEXPECT=${CMAKE_CURRENT_SOURCE_DIR}/tests/tools/typecheck/positive/${name}.out
-            -DRUNTIME_DIR=${CMAKE_CURRENT_SOURCE_DIR}/runtime
-            -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/nova_tool_tests/typecheck_positive_${name}
-            -DCC=cc
-            -P ${NOVA_TOOL_TEST_DRIVER}
-    )
-    set_tests_properties(nova_tool_typecheck_positive_${name} PROPERTIES LABELS "nova_tool;typecheck;positive")
+    add_nova_tool_test(typecheck positive nova_checker ${name} out)
 endfunction()
 
 function(add_nova_typecheck_negative_test name)
-    add_test(
-        NAME nova_tool_typecheck_negative_${name}
-        COMMAND ${CMAKE_COMMAND}
-            -DNOVA_COMPILE=$<TARGET_FILE:nova_compile>
-            -DTOOL_SOURCE=${CMAKE_CURRENT_SOURCE_DIR}/tools/nova_checker.nv
-            -DINPUT=${CMAKE_CURRENT_SOURCE_DIR}/tests/tools/typecheck/negative/${name}.nv
-            -DEXPECT=${CMAKE_CURRENT_SOURCE_DIR}/tests/tools/typecheck/negative/${name}.err
-            -DRUNTIME_DIR=${CMAKE_CURRENT_SOURCE_DIR}/runtime
-            -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/nova_tool_tests/typecheck_negative_${name}
-            -DSTRIP_RUNTIME_PREFIX=ON
-            -DCC=cc
-            -P ${NOVA_TOOL_NEGATIVE_TEST_DRIVER}
-    )
-    set_tests_properties(nova_tool_typecheck_negative_${name} PROPERTIES LABELS "nova_tool;typecheck;negative")
+    add_nova_tool_test(typecheck negative nova_checker ${name} err)
 endfunction()
 
-function(add_nova_frontend_test mode name ext)
+function(add_nova_frontend_test kind mode name ext)
+    set(test_name nova_tool_frontend_${kind}_${mode}_${name})
+
+    set(expect_failure OFF)
+    set(strip_runtime_prefix OFF)
+
+    if(kind STREQUAL "negative")
+        set(expect_failure ON)
+        set(strip_runtime_prefix ON)
+    endif()
+
     add_test(
-        NAME nova_tool_frontend_${mode}_${name}
+        NAME ${test_name}
         COMMAND ${CMAKE_COMMAND}
             -DNOVA_COMPILE=$<TARGET_FILE:nova_compile>
             -DTOOL_SOURCE=${CMAKE_CURRENT_SOURCE_DIR}/tools/nova_frontend.nv
-            -DINPUT=${CMAKE_CURRENT_SOURCE_DIR}/tests/tools/frontend/${mode}/${name}.nv
-            -DEXPECT=${CMAKE_CURRENT_SOURCE_DIR}/tests/tools/frontend/${mode}/${name}.${ext}
+            -DINPUT=${CMAKE_CURRENT_SOURCE_DIR}/tests/tools/frontend/${kind}/${mode}/${name}.nv
+            -DEXPECT=${CMAKE_CURRENT_SOURCE_DIR}/tests/tools/frontend/${kind}/${mode}/${name}.${ext}
             -DRUNTIME_DIR=${CMAKE_CURRENT_SOURCE_DIR}/runtime
-            -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/nova_tool_tests/frontend_${mode}_${name}
+            -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/nova_tool_tests/frontend_${kind}_${mode}_${name}
             -DCC=cc
+            -DMODE=${kind}
             -DTOOL_ARGS=${mode}
-            -P ${NOVA_TOOL_TEST_DRIVER}
+            -DEXPECT_FAILURE=${expect_failure}
+            -DSTRIP_RUNTIME_PREFIX=${strip_runtime_prefix}
+            -P ${NOVA_TEST_DRIVER_TOOL}
     )
-    set_tests_properties(nova_tool_frontend_${mode}_${name} PROPERTIES LABELS "nova_tool;frontend;${mode}")
+
+    set_tests_properties(
+        ${test_name}
+        PROPERTIES LABELS "nova_tool;frontend;${mode};${kind}"
+    )
+endfunction()
+
+function(add_nova_frontend_positive_test mode name ext)
+    add_nova_frontend_test(positive ${mode} ${name} ${ext})
 endfunction()
 
 function(add_nova_frontend_negative_test mode name)
-    add_test(
-        NAME nova_tool_frontend_negative_${mode}_${name}
-        COMMAND ${CMAKE_COMMAND}
-            -DNOVA_COMPILE=$<TARGET_FILE:nova_compile>
-            -DTOOL_SOURCE=${CMAKE_CURRENT_SOURCE_DIR}/tools/nova_frontend.nv
-            -DINPUT=${CMAKE_CURRENT_SOURCE_DIR}/tests/tools/frontend/negative/${mode}/${name}.nv
-            -DEXPECT=${CMAKE_CURRENT_SOURCE_DIR}/tests/tools/frontend/negative/${mode}/${name}.err
-            -DRUNTIME_DIR=${CMAKE_CURRENT_SOURCE_DIR}/runtime
-            -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/nova_tool_tests/frontend_negative_${mode}_${name}
-            -DSTRIP_RUNTIME_PREFIX=ON
-            -DCC=cc
-            -DTOOL_ARGS=${mode}
-            -P ${NOVA_TOOL_NEGATIVE_TEST_DRIVER}
-    )
-    set_tests_properties(nova_tool_frontend_negative_${mode}_${name} PROPERTIES LABELS "nova_tool;frontend;negative;${mode}")
+    add_nova_frontend_test(negative ${mode} ${name} err)
 endfunction()
 
 function(add_nova_frontend_smoke_check name source_path)
@@ -400,13 +284,83 @@ function(add_nova_frontend_smoke_check name source_path)
             -DRUNTIME_DIR=${CMAKE_CURRENT_SOURCE_DIR}/runtime
             -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/nova_tool_tests/frontend_smoke_${name}
             -DCC=cc
+            -DMODE=positive
             -DTOOL_ARGS=check
-            -P ${NOVA_TOOL_TEST_DRIVER}
+            -DEXPECT_FAILURE=OFF
+            -P ${NOVA_TEST_DRIVER_TOOL}
     )
-    set_tests_properties(nova_tool_frontend_smoke_${name} PROPERTIES LABELS "nova_tool;frontend;smoke")
+
+    set_tests_properties(
+        nova_tool_frontend_smoke_${name}
+        PROPERTIES LABELS "nova_tool;frontend;smoke"
+    )
 endfunction()
 
-function(add_import_codegen_positive_test name)
+function(add_nova_frontend_import_test kind mode name ext)
+    set(test_name nova_tool_frontend_import_${kind}_${mode}_${name})
+
+    set(expect_failure OFF)
+    set(strip_runtime_prefix OFF)
+
+    if(kind STREQUAL "negative")
+        set(expect_failure ON)
+        set(strip_runtime_prefix ON)
+    endif()
+
+    add_test(
+        NAME ${test_name}
+        COMMAND ${CMAKE_COMMAND}
+            -DNOVA_COMPILE=$<TARGET_FILE:nova_compile>
+            -DTOOL_SOURCE=${CMAKE_CURRENT_SOURCE_DIR}/tools/nova_frontend.nv
+            -DINPUT=${CMAKE_CURRENT_SOURCE_DIR}/tests/tools/frontend_import/${kind}/${mode}/${name}/main.nv
+            -DEXPECT=${CMAKE_CURRENT_SOURCE_DIR}/tests/tools/frontend_import/${kind}/${mode}/${name}/main.${ext}
+            -DRUNTIME_DIR=${CMAKE_CURRENT_SOURCE_DIR}/runtime
+            -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/nova_tool_tests/frontend_import_${kind}_${mode}_${name}
+            -DCC=cc
+            -DMODE=${kind}
+            -DTOOL_ARGS=${mode}
+            -DEXPECT_FAILURE=${expect_failure}
+            -DSTRIP_RUNTIME_PREFIX=${strip_runtime_prefix}
+            -P ${NOVA_TEST_DRIVER_TOOL}
+    )
+
+    set_tests_properties(
+        ${test_name}
+        PROPERTIES LABELS "nova_tool;frontend;import;${mode};${kind}"
+    )
+endfunction()
+
+function(add_nova_frontend_import_positive_test mode name ext)
+    add_nova_frontend_import_test(positive ${mode} ${name} ${ext})
+endfunction()
+
+function(add_nova_frontend_import_negative_test mode name)
+    add_nova_frontend_import_test(negative ${mode} ${name} err)
+endfunction()
+
+function(add_nova_codegen_tool_test name)
+    set(test_name nova_tool_codegen_positive_${name})
+
+    add_test(
+        NAME ${test_name}
+        COMMAND ${CMAKE_COMMAND}
+            -DNOVA_COMPILE=$<TARGET_FILE:nova_compile>
+            -DTOOL_SOURCE=${CMAKE_CURRENT_SOURCE_DIR}/tools/nova_codegen.nv
+            -DINPUT=${CMAKE_CURRENT_SOURCE_DIR}/tests/tools/codegen/positive/${name}.nv
+            -DEXPECT=${CMAKE_CURRENT_SOURCE_DIR}/tests/tools/codegen/positive/${name}.out
+            -DRUNTIME_DIR=${CMAKE_CURRENT_SOURCE_DIR}/runtime
+            -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/nova_tool_tests/codegen_positive_${name}
+            -DCC=cc
+            -P ${NOVA_TEST_DRIVER_TOOL_CODEGEN}
+    )
+
+    set_tests_properties(
+        ${test_name}
+        PROPERTIES LABELS "nova_tool;codegen;positive"
+    )
+endfunction()
+
+function(add_nova_import_codegen_positive_test name)
     add_test(
         NAME import_codegen_positive_${name}
         COMMAND ${CMAKE_COMMAND}
@@ -416,12 +370,12 @@ function(add_import_codegen_positive_test name)
             -DRUNTIME_DIR=${CMAKE_CURRENT_SOURCE_DIR}/runtime
             -DTEST_NAME=import_codegen_positive_${name}
             -DCC=cc
-            -P ${CODEGEN_TEST_DRIVER}
+            -P ${NOVA_TEST_DRIVER_CODEGEN}
     )
     set_tests_properties(import_codegen_positive_${name} PROPERTIES LABELS "import;codegen;positive")
 endfunction()
 
-function(add_import_negative_test name)
+function(add_nova_import_parse_negative_test name)
     add_test(
         NAME import_negative_${name}
         COMMAND ${CMAKE_COMMAND}
@@ -430,63 +384,12 @@ function(add_import_negative_test name)
             -DEXPECT=${CMAKE_CURRENT_SOURCE_DIR}/tests/import/negative/${name}/main.err
             -DMODE=negative
             -DLABEL=stderr
-            -P ${TEXT_TEST_DRIVER}
+            -P ${NOVA_TEST_DRIVER_TEXT_COMPARE}
     )
-    set_tests_properties(import_negative_${name} PROPERTIES LABELS "import;negative")
+    set_tests_properties(import_negative_${name} PROPERTIES LABELS "import;parser;negative")
 endfunction()
 
-function(add_nova_frontend_import_check_test name)
-    add_test(
-        NAME nova_tool_frontend_import_check_${name}
-        COMMAND ${CMAKE_COMMAND}
-            -DNOVA_COMPILE=$<TARGET_FILE:nova_compile>
-            -DTOOL_SOURCE=${CMAKE_CURRENT_SOURCE_DIR}/tools/nova_frontend.nv
-            -DINPUT=${CMAKE_CURRENT_SOURCE_DIR}/tests/tools/frontend_import/positive/check/${name}/main.nv
-            -DEXPECT=${CMAKE_CURRENT_SOURCE_DIR}/tests/tools/frontend_import/positive/check/${name}/main.check
-            -DRUNTIME_DIR=${CMAKE_CURRENT_SOURCE_DIR}/runtime
-            -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/nova_tool_tests/frontend_import_check_${name}
-            -DCC=cc
-            -DTOOL_ARGS=check
-            -P ${NOVA_TOOL_TEST_DRIVER}
-    )
-    set_tests_properties(nova_tool_frontend_import_check_${name} PROPERTIES LABELS "nova_tool;frontend;import;check")
-endfunction()
-
-function(add_nova_frontend_import_check_negative_test name)
-    add_test(
-        NAME nova_tool_frontend_import_check_negative_${name}
-        COMMAND ${CMAKE_COMMAND}
-            -DNOVA_COMPILE=$<TARGET_FILE:nova_compile>
-            -DTOOL_SOURCE=${CMAKE_CURRENT_SOURCE_DIR}/tools/nova_frontend.nv
-            -DINPUT=${CMAKE_CURRENT_SOURCE_DIR}/tests/tools/frontend_import/negative/check/${name}/main.nv
-            -DEXPECT=${CMAKE_CURRENT_SOURCE_DIR}/tests/tools/frontend_import/negative/check/${name}/main.err
-            -DRUNTIME_DIR=${CMAKE_CURRENT_SOURCE_DIR}/runtime
-            -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/nova_tool_tests/frontend_import_check_negative_${name}
-            -DSTRIP_RUNTIME_PREFIX=ON
-            -DCC=cc
-            -DTOOL_ARGS=check
-            -P ${NOVA_TOOL_NEGATIVE_TEST_DRIVER}
-    )
-    set_tests_properties(nova_tool_frontend_import_check_negative_${name} PROPERTIES LABELS "nova_tool;frontend;import;check;negative")
-endfunction()
-
-function(add_nova_codegen_tool_test name)
-    add_test(
-        NAME nova_tool_codegen_${name}
-        COMMAND ${CMAKE_COMMAND}
-            -DNOVA_COMPILE=$<TARGET_FILE:nova_compile>
-            -DTOOL_SOURCE=${CMAKE_CURRENT_SOURCE_DIR}/tools/nova_codegen.nv
-            -DINPUT=${CMAKE_CURRENT_SOURCE_DIR}/tests/tools/codegen/${name}.nv
-            -DEXPECT=${CMAKE_CURRENT_SOURCE_DIR}/tests/tools/codegen/${name}.out
-            -DRUNTIME_DIR=${CMAKE_CURRENT_SOURCE_DIR}/runtime
-            -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/nova_tool_tests/codegen_${name}
-            -DCC=cc
-            -P ${NOVA_CODEGEN_TOOL_TEST_DRIVER}
-    )
-    set_tests_properties(nova_tool_codegen_${name} PROPERTIES LABELS "nova_tool;codegen")
-endfunction()
-
-function(add_import_sema_negative_test name)
+function(add_nova_import_sema_negative_test name)
     add_test(
         NAME import_negative_sema_${name}
         COMMAND ${CMAKE_COMMAND}
@@ -495,9 +398,23 @@ function(add_import_sema_negative_test name)
             -DEXPECT=${CMAKE_CURRENT_SOURCE_DIR}/tests/import/negative/${name}/main.err
             -DMODE=negative
             -DLABEL=stderr
-            -P ${TEXT_TEST_DRIVER}
+            -P ${NOVA_TEST_DRIVER_TEXT_COMPARE}
     )
-    set_tests_properties(import_negative_sema_${name} PROPERTIES LABELS "import;sema;negative")
+    set_tests_properties(
+        import_negative_sema_${name} 
+        PROPERTIES LABELS "import;sema;negative")
+endfunction()
+
+function(add_nova_selfhost_test)
+    add_test(
+        NAME self_host_stage_codegen
+        COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/scripts/self_host.sh
+    )
+
+    set_tests_properties(
+        self_host_stage_codegen
+        PROPERTIES LABELS "selfhost;codegen"
+    )
 endfunction()
 
 
@@ -562,37 +479,36 @@ add_sema_negative_test(function_argument_type_mismatch)
 add_sema_negative_test(call_unknown_function)
 
 # step 5
-add_codegen_positive_test(helloworld)
-add_codegen_positive_test(arithmetic)
-add_codegen_positive_test(function_call)
-add_codegen_positive_test(recursion)
-add_codegen_positive_test(loop)
-add_codegen_positive_test(string_concat)
-add_codegen_positive_test(nested_block_shadowing)
+add_nova_cpp_codegen_positive_test(helloworld)
+add_nova_cpp_codegen_positive_test(arithmetic)
+add_nova_cpp_codegen_positive_test(function_call)
+add_nova_cpp_codegen_positive_test(recursion)
+add_nova_cpp_codegen_positive_test(loop)
+add_nova_cpp_codegen_positive_test(string_concat)
+add_nova_cpp_codegen_positive_test(nested_block_shadowing)
 
 # step 6
-add_codegen_positive_test(string_len_get)
-add_codegen_positive_test(string_slice)
-add_codegen_positive_test(string_predicates)
-add_codegen_positive_test(int_to_str_and_concat)
-add_codegen_positive_test(buffer_builder)
-add_codegen_positive_test(buffer_two_buffers)
-add_codegen_positive_test(file_roundtrip)
+add_nova_cpp_codegen_positive_test(string_len_get)
+add_nova_cpp_codegen_positive_test(string_slice)
+add_nova_cpp_codegen_positive_test(string_predicates)
+add_nova_cpp_codegen_positive_test(int_to_str_and_concat)
+add_nova_cpp_codegen_positive_test(buffer_builder)
+add_nova_cpp_codegen_positive_test(buffer_two_buffers)
+add_nova_cpp_codegen_positive_test(file_roundtrip)
 
 # step 7
-add_nova_lexer_tool_test(basic)
-add_nova_lexer_tool_test(expressions)
-add_nova_lexer_tool_test(strings)
-add_nova_lexer_tool_test(comments)
-add_nova_lexer_tool_test(operators)
-add_nova_lexer_tool_test(block_comment_inline)
+add_nova_tokenizer_tool_test(expressions)
+add_nova_tokenizer_tool_test(strings)
+add_nova_tokenizer_tool_test(comments)
+add_nova_tokenizer_tool_test(operators)
+add_nova_tokenizer_tool_test(block_comment_inline)
 
 # step 8
-add_codegen_positive_test(struct_basic)
-add_codegen_positive_test(struct_assignment)
-add_codegen_positive_test(struct_function_return)
-add_codegen_positive_test(struct_nested)
-add_codegen_positive_test(struct_field_order)
+add_nova_cpp_codegen_positive_test(struct_basic)
+add_nova_cpp_codegen_positive_test(struct_assignment)
+add_nova_cpp_codegen_positive_test(struct_function_return)
+add_nova_cpp_codegen_positive_test(struct_nested)
+add_nova_cpp_codegen_positive_test(struct_field_order)
 
 add_sema_negative_test(unknown_struct_type)
 add_sema_negative_test(duplicate_struct)
@@ -607,12 +523,12 @@ add_sema_negative_test(struct_field_void_type)
 add_sema_negative_test(struct_param_unknown_type)
 
 # step 9
-add_codegen_positive_test(vec_int_basic)
-add_codegen_positive_test(vec_struct_token)
-add_codegen_positive_test(vec_set)
-add_codegen_positive_test(vec_function_param)
-add_codegen_positive_test(vec_function_return)
-add_codegen_positive_test(vec_of_str)
+add_nova_cpp_codegen_positive_test(vec_int_basic)
+add_nova_cpp_codegen_positive_test(vec_struct_token)
+add_nova_cpp_codegen_positive_test(vec_set)
+add_nova_cpp_codegen_positive_test(vec_function_param)
+add_nova_cpp_codegen_positive_test(vec_function_return)
+add_nova_cpp_codegen_positive_test(vec_of_str)
 
 add_sema_negative_test(vec_new_without_context)
 add_sema_negative_test(vec_push_type_mismatch)
@@ -637,9 +553,9 @@ add_nova_parser_tool_test(vec_decl)
 add_nova_parser_tool_test(nested_blocks)
 
 # step 12
-add_codegen_positive_test(enum_basic)
-add_codegen_positive_test(enum_struct_field)
-add_codegen_positive_test(enum_vec)
+add_nova_cpp_codegen_positive_test(enum_basic)
+add_nova_cpp_codegen_positive_test(enum_struct_field)
+add_nova_cpp_codegen_positive_test(enum_vec)
 
 add_sema_negative_test(duplicate_enum)
 add_sema_negative_test(duplicate_enum_member)
@@ -672,18 +588,20 @@ add_nova_checker_negative_test(void_let_type)
 add_nova_checker_negative_test(duplicate_let_same_block)
 
 # step 15
-add_nova_expr_parser_tool_test(expression_precedence)
-add_nova_expr_parser_tool_test(expression_call_field)
-add_nova_expr_parser_tool_test(expression_struct_literal)
-add_nova_expr_parser_tool_test(expression_assignment)
-add_nova_expr_parser_tool_test(condition_expr)
-add_nova_expr_parser_tool_test(expression_return_value)
-add_nova_expr_parser_tool_test(expression_unary)
+add_nova_parser_tool_test(expression_precedence)
+add_nova_parser_tool_test(expression_call_field)
+add_nova_parser_tool_test(expression_struct_literal)
+add_nova_parser_tool_test(expression_assignment)
+add_nova_parser_tool_test(condition_expr)
+add_nova_parser_tool_test(expression_return_value)
+add_nova_parser_tool_test(expression_unary)
 
-add_nova_expr_parser_negative_test(missing_expr_after_assign)
-add_nova_expr_parser_negative_test(missing_rparen_in_call)
-add_nova_expr_parser_negative_test(malformed_struct_literal)
-add_nova_expr_parser_negative_test(incomplete_binary_expr)
+add_nova_parser_negative_test(missing_expr_after_assign)
+add_nova_parser_negative_test(missing_rparen_in_call)
+add_nova_parser_negative_test(malformed_struct_literal)
+add_nova_parser_negative_test(incomplete_binary_expr)
+add_nova_parser_negative_test(missing_rbrace)
+add_nova_parser_negative_test(missing_semicolon)
 
 # step 16
 add_nova_typecheck_positive_test(let_return_int)
@@ -705,37 +623,39 @@ add_nova_typecheck_negative_test(assignment_type_mismatch)
 add_nova_typecheck_negative_test(non_assignable_target)
 
 # step 17
-add_nova_frontend_test(tokens basic tok)
-add_nova_frontend_test(tokens enum_expr tok)
+add_nova_frontend_positive_test(tokens basic tok)
+add_nova_frontend_positive_test(tokens enum_expr tok)
 
-add_nova_frontend_test(parse expression out)
-add_nova_frontend_test(parse condition out)
+add_nova_frontend_positive_test(parse expression out)
+add_nova_frontend_positive_test(parse condition out)
 
-add_nova_frontend_test(check let_return_int check)
-add_nova_frontend_test(check struct_enum_vec check)
+add_nova_frontend_positive_test(check let_return_int check)
+add_nova_frontend_positive_test(check struct_enum_vec check)
 
 add_nova_frontend_negative_test(check type_mismatch)
 add_nova_frontend_negative_test(check undefined_variable)
 add_nova_frontend_negative_test(parse missing_expr)
 
 add_nova_frontend_smoke_check(nova_tokenizer tools/nova_tokenizer.nv)
-add_nova_frontend_smoke_check(nova_expr_parser tools/nova_expr_parser.nv)
+add_nova_frontend_smoke_check(nova_parser tools/nova_parser.nv)
 add_nova_frontend_smoke_check(nova_checker tools/nova_checker.nv)
 
 # step 18
-add_import_codegen_positive_test(simple)
-add_import_codegen_positive_test(diamond)
+add_nova_import_codegen_positive_test(simple)
+add_nova_import_codegen_positive_test(diamond)
 
-add_import_negative_test(missing)
-add_import_negative_test(cyclic)
+add_nova_import_parse_negative_test(missing)
+add_nova_import_parse_negative_test(cyclic)
 
-add_nova_frontend_import_check_test(simple)
+add_nova_frontend_import_positive_test(check simple check)
 
 # step 19
 add_nova_codegen_tool_test(hello)
 add_nova_codegen_tool_test(arithmetic)
 add_nova_codegen_tool_test(function_call)
 add_nova_codegen_tool_test(if_else)
+add_nova_codegen_tool_test(else_if_chain)
+add_nova_codegen_tool_test(control_flow_nested)
 add_nova_codegen_tool_test(while_loop)
 add_nova_codegen_tool_test(bool_logic)
 add_nova_codegen_tool_test(string_concat)
@@ -766,7 +686,7 @@ add_nova_codegen_tool_test(vec_struct_param)
 add_nova_codegen_tool_test(vec_shadowing)
 
 # step 22
-add_codegen_positive_test(string_plus)
+add_nova_cpp_codegen_positive_test(string_plus)
 add_nova_typecheck_positive_test(string_plus)
 add_nova_codegen_tool_test(string_plus)
 
@@ -775,23 +695,22 @@ add_nova_typecheck_positive_test(noreturn_if_else)
 add_nova_typecheck_negative_test(missing_return)
 
 # step 23
-add_import_negative_test(source_location_parse)
-add_import_sema_negative_test(source_location_sema)
-add_nova_frontend_import_check_negative_test(source_location)
+add_nova_import_parse_negative_test(source_location_parse)
+add_nova_import_sema_negative_test(source_location_sema)
+add_nova_frontend_import_negative_test(check source_location)
+add_nova_frontend_negative_test(parse eof_missing_rbrace)
 
 # step 24
-add_import_codegen_positive_test(duplicate_same_file)
-add_import_codegen_positive_test(duplicate_parent_path)
-add_import_codegen_positive_test(nested_relative)
-add_import_codegen_positive_test(import_in_middle)
+add_nova_import_codegen_positive_test(duplicate_same_file)
+add_nova_import_codegen_positive_test(duplicate_parent_path)
+add_nova_import_codegen_positive_test(nested_relative)
+add_nova_import_codegen_positive_test(import_in_middle)
 
-add_codegen_positive_test(string_ends_with)
+add_nova_cpp_codegen_positive_test(string_ends_with)
 add_nova_typecheck_positive_test(string_ends_with)
 add_nova_codegen_tool_test(string_ends_with)
 
 # step 25
-add_test(
-    NAME self_host_stage_codegen
-    COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/scripts/self_host.sh
-)
-set_tests_properties(self_host_stage_codegen PROPERTIES LABELS "selfhost;codegen")
+add_nova_selfhost_test()
+
+# step 27

@@ -1,1 +1,1 @@
-tests/parser/negative/invalid_return_expr.nv:2:12: ParseError: expected expression after 'return'
+tests/parser/negative/invalid_return_expr.nv:2:12: ParserError: expected expression after 'return'

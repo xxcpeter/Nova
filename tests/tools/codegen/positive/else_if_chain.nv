@@ -1,0 +1,16 @@
+fn classify(x: int) : str {
+    if (x < 0) {
+        return "neg";
+    } else if (x == 0) {
+        return "zero";
+    } else {
+        return "pos";
+    }
+}
+
+fn main() : void {
+    print_str(classify(-1));
+    print_str(classify(0));
+    print_str(classify(1));
+    return;
+}

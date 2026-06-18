@@ -1,1 +1,1 @@
-tests/parser/negative/missing_rparen.nv:2:14: ParseError: expected ')' after condition
+tests/parser/negative/missing_rparen.nv:2:14: ParserError: expected ')' after condition

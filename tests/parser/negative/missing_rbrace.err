@@ -1,1 +1,1 @@
-tests/parser/negative/missing_rbrace.nv:2:12: ParseError: expected '}' after block
+tests/parser/negative/missing_rbrace.nv:2:12: ParserError: expected '}' after block

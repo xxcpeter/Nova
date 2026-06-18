@@ -663,12 +663,10 @@ bool SemanticAnalyzer::expr_always_exits(const Expr& expr) const {
 
 bool SemanticAnalyzer::is_no_return_function(std::string_view name) const {
     return name == "nova_runtime_error" || 
-           name == "lexer_error" ||
-           name == "parser_error" ||
+           name == "lexer_error_at" ||
            name == "parser_error_at" ||
-           name == "checker_error" ||
+           name == "checker_internal_error" ||
            name == "checker_error_at" ||
-           name == "codegen_error" ||
            name == "codegen_error_at" ||
-           name == "import_error";
+           name == "import_error_at";
 }

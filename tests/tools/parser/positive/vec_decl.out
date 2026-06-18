@@ -1,0 +1,14 @@
+Program
+  Struct name=Token
+    Field name=kind type=str
+  Function name=main return=void
+    Block
+      LetStmt name=tokens type=vec<Token>
+        CallExpr name=vec_new
+      ExprStmt
+        CallExpr name=vec_push
+          IdentifierExpr name=tokens
+          StructLiteralExpr name=Token
+            FieldInit name=kind
+              StrLiteralExpr value="fn"
+      ReturnStmt

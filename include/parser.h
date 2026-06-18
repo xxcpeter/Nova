@@ -66,6 +66,6 @@ private:
 class ParseError : public std::runtime_error {
 public:
     ParseError(const std::string& message, const SourceLocation& location) : 
-        std::runtime_error(std::format("{}:{}:{}: ParseError: {}", 
+        std::runtime_error(std::format("{}:{}:{}: ParserError: {}", 
             location.file, location.line, location.column, message)) {}
 };

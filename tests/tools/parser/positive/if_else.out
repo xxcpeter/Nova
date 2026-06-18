@@ -1,0 +1,15 @@
+Program
+  Function name=choose return=int
+    Param name=flag type=bool
+    Block
+      IfStmt
+        Condition
+          IdentifierExpr name=flag
+        Then
+          Block
+            ReturnStmt
+              IntLiteralExpr value=1
+        Else
+          Block
+            ReturnStmt
+              IntLiteralExpr value=2

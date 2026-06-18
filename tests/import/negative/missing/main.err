@@ -1,1 +1,1 @@
-ImportError: cannot open import 'missing.nv'
+tests/import/negative/missing/main.nv:1:9: ImportError: cannot open import 'missing.nv'

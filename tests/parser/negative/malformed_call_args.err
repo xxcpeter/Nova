@@ -1,1 +1,1 @@
-tests/parser/negative/malformed_call_args.nv:2:9: ParseError: expected expression in argument list
+tests/parser/negative/malformed_call_args.nv:2:9: ParserError: expected expression in argument list

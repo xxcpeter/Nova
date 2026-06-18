@@ -1,0 +1,1 @@
+tests/tools/parser/negative/missing_rbrace.nv:3:1: ParserError: expected '}' at end of block statement

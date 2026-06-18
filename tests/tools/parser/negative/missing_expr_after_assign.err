@@ -1,0 +1,1 @@
+tests/tools/parser/negative/missing_expr_after_assign.nv:2:19: ParserError: expected expression

@@ -1,16 +1,8 @@
-fn lexer_error(message: str) : void {
-    nova_runtime_error("LexerError: " + message);
-}
-
 fn lexer_error_at(file: str, line: int, column: int, message: str) : void {
     if (str_eq(file, "") && line == 0 && column == 0) {
         nova_runtime_error("LexerError: " + message);
     }
     nova_runtime_error(file + ":" + int_to_str(line) + ":" + int_to_str(column) + ": LexerError: " + message);
-}
-
-fn parser_error(message: str) : void {
-    parser_error_at("", 0, 0, message);
 }
 
 fn parser_error_at(file: str, line: int, column: int, message: str) : void {
@@ -20,7 +12,7 @@ fn parser_error_at(file: str, line: int, column: int, message: str) : void {
     nova_runtime_error(file + ":" + int_to_str(line) + ":" + int_to_str(column) + ": ParserError: " + message);
 }
 
-fn checker_error(message: str) : void {
+fn checker_internal_error(message: str) : void {
     checker_error_at("", 0, 0, message);
 }
 
@@ -31,19 +23,11 @@ fn checker_error_at(file: str, line: int, column: int, message: str) : void {
     nova_runtime_error(file + ":" + int_to_str(line) + ":" + int_to_str(column) + ": CheckerError: " + message);
 }
 
-fn codegen_error(message: str) : void {
-    codegen_error_at("", 0, 0, message);
-}
-
 fn codegen_error_at(file: str, line: int, column: int, message: str) : void {
     if (str_eq(file, "") && line == 0 && column == 0) {
         nova_runtime_error("CodegenError: " + message);
     }
     nova_runtime_error(file + ":" + int_to_str(line) + ":" + int_to_str(column) + ": CodegenError: " + message);
-}
-
-fn import_error(message: str) : void {
-    import_error_at("", 0, 0, message);
 }
 
 fn import_error_at(file: str, line: int, column: int, message: str) : void {

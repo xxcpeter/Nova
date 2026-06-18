@@ -2,7 +2,11 @@ Program
   Function name=main return=void
     Block
       LetStmt name=x type=int
+        IntLiteralExpr value=1
       Block
         LetStmt name=x type=int
+          IntLiteralExpr value=2
         ExprStmt
+          CallExpr name=print_int
+            IdentifierExpr name=x
       ReturnStmt
