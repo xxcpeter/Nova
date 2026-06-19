@@ -99,6 +99,7 @@ set(NOVA_TEST_DRIVER_TEXT_COMPARE ${CMAKE_CURRENT_SOURCE_DIR}/cmake/RunTextCompa
 set(NOVA_TEST_DRIVER_CODEGEN ${CMAKE_CURRENT_SOURCE_DIR}/cmake/RunCodegenTest.cmake)
 set(NOVA_TEST_DRIVER_TOOL ${CMAKE_CURRENT_SOURCE_DIR}/cmake/RunNovaToolTest.cmake)
 set(NOVA_TEST_DRIVER_TOOL_CODEGEN ${CMAKE_CURRENT_SOURCE_DIR}/cmake/RunNovaCodegenToolTest.cmake)
+set(NOVA_TEST_DRIVER_TOOL_CLI ${CMAKE_CURRENT_SOURCE_DIR}/cmake/RunNovaToolCliTest.cmake)
 
 function(add_nova_cpp_text_test component kind name ext stream)
     if(component STREQUAL "lexer")
@@ -202,11 +203,11 @@ function(add_nova_tool_test group kind tool name ext)
     )
 endfunction()
 
-function(add_nova_tokenizer_tool_test name)
+function(add_nova_tokenizer_positive_test name)
     add_nova_tool_test(tokenizer positive nova_tokenizer ${name} tok)
 endfunction()
 
-function(add_nova_parser_tool_test name)
+function(add_nova_parser_positive_test name)
     add_nova_tool_test(parser positive nova_parser ${name} out)
 endfunction()
 
@@ -417,6 +418,52 @@ function(add_nova_selfhost_test)
     )
 endfunction()
 
+function(add_nova_compile_tool_test name)
+    set(test_name nova_tool_compile_positive_${name})
+
+    add_test(
+        NAME ${test_name}
+        COMMAND ${CMAKE_COMMAND}
+            -DNOVA_COMPILE=$<TARGET_FILE:nova_compile>
+            -DTOOL_SOURCE=${CMAKE_CURRENT_SOURCE_DIR}/tools/nova_compile.nv
+            -DINPUT=${CMAKE_CURRENT_SOURCE_DIR}/tests/tools/compile/positive/${name}.nv
+            -DEXPECT=${CMAKE_CURRENT_SOURCE_DIR}/tests/tools/compile/positive/${name}.out
+            -DRUNTIME_DIR=${CMAKE_CURRENT_SOURCE_DIR}/runtime
+            -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/nova_tool_tests/compile_positive_${name}
+            -DCC=cc
+            -P ${NOVA_TEST_DRIVER_TOOL_CODEGEN}
+    )
+
+    set_tests_properties(
+        ${test_name}
+        PROPERTIES LABELS "nova_tool;compile;positive"
+    )
+endfunction()
+
+function(add_nova_tool_cli_negative_test group tool name)
+    set(test_name nova_tool_cli_negative_${group}_${name})
+
+    add_test(
+        NAME ${test_name}
+        COMMAND ${CMAKE_COMMAND}
+            -DNOVA_COMPILE=$<TARGET_FILE:nova_compile>
+            -DTOOL_SOURCE=${CMAKE_CURRENT_SOURCE_DIR}/tools/${tool}.nv
+            -DEXPECT=${CMAKE_CURRENT_SOURCE_DIR}/tests/tools/cli/negative/${name}.err
+            -DRUNTIME_DIR=${CMAKE_CURRENT_SOURCE_DIR}/runtime
+            -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/nova_tool_tests/cli_negative_${group}_${name}
+            -DCC=cc
+            -DCLI_ARGS=
+            -DEXPECT_FAILURE=ON
+            -DSTRIP_RUNTIME_PREFIX=ON
+            -P ${NOVA_TEST_DRIVER_TOOL_CLI}
+    )
+
+    set_tests_properties(
+        ${test_name}
+        PROPERTIES LABELS "nova_tool;cli;negative;${group}"
+    )
+endfunction()
+
 
 # step 2
 add_lexer_positive_test(single_tokens)
@@ -497,11 +544,11 @@ add_nova_cpp_codegen_positive_test(buffer_two_buffers)
 add_nova_cpp_codegen_positive_test(file_roundtrip)
 
 # step 7
-add_nova_tokenizer_tool_test(expressions)
-add_nova_tokenizer_tool_test(strings)
-add_nova_tokenizer_tool_test(comments)
-add_nova_tokenizer_tool_test(operators)
-add_nova_tokenizer_tool_test(block_comment_inline)
+add_nova_tokenizer_positive_test(expressions)
+add_nova_tokenizer_positive_test(strings)
+add_nova_tokenizer_positive_test(comments)
+add_nova_tokenizer_positive_test(operators)
+add_nova_tokenizer_positive_test(block_comment_inline)
 
 # step 8
 add_nova_cpp_codegen_positive_test(struct_basic)
@@ -538,19 +585,19 @@ add_sema_negative_test(vec_void_element)
 add_sema_negative_test(vec_unknown_struct_element)
 
 # step 10
-add_nova_tokenizer_tool_test(basic)
-add_nova_tokenizer_tool_test(struct_vec)
-add_nova_tokenizer_tool_test(field_access)
-add_nova_tokenizer_tool_test(strings_comments)
+add_nova_tokenizer_positive_test(basic)
+add_nova_tokenizer_positive_test(struct_vec)
+add_nova_tokenizer_positive_test(field_access)
+add_nova_tokenizer_positive_test(strings_comments)
 
 # step 11
-add_nova_parser_tool_test(minimal_function)
-add_nova_parser_tool_test(let_return)
-add_nova_parser_tool_test(if_else)
-add_nova_parser_tool_test(while_loop)
-add_nova_parser_tool_test(struct_decl)
-add_nova_parser_tool_test(vec_decl)
-add_nova_parser_tool_test(nested_blocks)
+add_nova_parser_positive_test(minimal_function)
+add_nova_parser_positive_test(let_return)
+add_nova_parser_positive_test(if_else)
+add_nova_parser_positive_test(while_loop)
+add_nova_parser_positive_test(struct_decl)
+add_nova_parser_positive_test(vec_decl)
+add_nova_parser_positive_test(nested_blocks)
 
 # step 12
 add_nova_cpp_codegen_positive_test(enum_basic)
@@ -564,8 +611,8 @@ add_sema_negative_test(enum_type_mismatch)
 add_sema_negative_test(enum_member_on_unknown_enum)
 
 # step 13
-add_nova_tokenizer_tool_test(enum_decl)
-add_nova_parser_tool_test(enum_decl)
+add_nova_tokenizer_positive_test(enum_decl)
+add_nova_parser_positive_test(enum_decl)
 
 # step 14
 add_nova_checker_positive_test(minimal_function)
@@ -588,13 +635,13 @@ add_nova_checker_negative_test(void_let_type)
 add_nova_checker_negative_test(duplicate_let_same_block)
 
 # step 15
-add_nova_parser_tool_test(expression_precedence)
-add_nova_parser_tool_test(expression_call_field)
-add_nova_parser_tool_test(expression_struct_literal)
-add_nova_parser_tool_test(expression_assignment)
-add_nova_parser_tool_test(condition_expr)
-add_nova_parser_tool_test(expression_return_value)
-add_nova_parser_tool_test(expression_unary)
+add_nova_parser_positive_test(expression_precedence)
+add_nova_parser_positive_test(expression_call_field)
+add_nova_parser_positive_test(expression_struct_literal)
+add_nova_parser_positive_test(expression_assignment)
+add_nova_parser_positive_test(condition_expr)
+add_nova_parser_positive_test(expression_return_value)
+add_nova_parser_positive_test(expression_unary)
 
 add_nova_parser_negative_test(missing_expr_after_assign)
 add_nova_parser_negative_test(missing_rparen_in_call)
@@ -713,4 +760,14 @@ add_nova_codegen_tool_test(string_ends_with)
 # step 25
 add_nova_selfhost_test()
 
-# step 27
+# step 28
+add_nova_compile_tool_test(hello)
+add_nova_compile_tool_test(struct_vec)
+add_nova_compile_tool_test(recursion)
+
+add_nova_tool_cli_negative_test(frontend nova_frontend nova_frontend_bad_args)
+add_nova_tool_cli_negative_test(codegen nova_codegen nova_codegen_bad_args)
+add_nova_tool_cli_negative_test(compile nova_compile nova_compile_bad_args)
+add_nova_tool_cli_negative_test(tokenizer nova_tokenizer nova_tokenizer_bad_args)
+add_nova_tool_cli_negative_test(parser nova_parser nova_parser_bad_args)
+add_nova_tool_cli_negative_test(checker nova_checker nova_checker_bad_args)

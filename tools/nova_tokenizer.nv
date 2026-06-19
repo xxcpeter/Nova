@@ -4,7 +4,7 @@ import "../lib/tokenizer.nv";
 
 fn main() : void {
     if (arg_count() != 3) {
-        print_str("Usage: nova_tokenizer <input.nv> <output.tok>");
+        nova_runtime_error("Usage: nova_tokenizer <input.nv> <output.tok>");
         return;
     }
 

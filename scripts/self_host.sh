@@ -41,16 +41,16 @@ compare_files() {
 }
 
 PROGRAMS=(
-  "tests/tools/codegen/hello.nv"
-  "tests/tools/codegen/recursion.nv"
-  "tests/tools/codegen/vec_basic.nv"
-  "tests/tools/codegen/vec_str_basic.nv"
-  "tests/tools/codegen/vec_struct_basic.nv"
-  "tests/tools/codegen/string_plus.nv"
-  "tests/tools/codegen/string_ends_with.nv"
-  "tests/tools/codegen/struct_basic.nv"
-  "tests/tools/codegen/enum_basic.nv"
-  "tests/tools/codegen/import_basic/main.nv"
+  "tests/tools/codegen/positive/hello.nv"
+  "tests/tools/codegen/positive/recursion.nv"
+  "tests/tools/codegen/positive/vec_basic.nv"
+  "tests/tools/codegen/positive/vec_str_basic.nv"
+  "tests/tools/codegen/positive/vec_struct_basic.nv"
+  "tests/tools/codegen/positive/string_plus.nv"
+  "tests/tools/codegen/positive/string_ends_with.nv"
+  "tests/tools/codegen/positive/struct_basic.nv"
+  "tests/tools/codegen/positive/enum_basic.nv"
+  "tests/tools/codegen/positive/import_basic/main.nv"
 )
 
 echo "[self-host] building stage0"
@@ -64,6 +64,23 @@ compile_c "$WORK/stage1/nova_codegen.c" "$WORK/stage1/nova_codegen"
 echo "[self-host] building stage2"
 run_codegen "$WORK/stage1/nova_codegen" tools/nova_codegen.nv "$WORK/stage2/nova_codegen.c"
 compile_c "$WORK/stage2/nova_codegen.c" "$WORK/stage2/nova_codegen"
+
+echo "[self-host] building nova_compile stage1"
+run_codegen "$WORK/stage0/nova_codegen" tools/nova_compile.nv "$WORK/stage1/nova_compile.c"
+compile_c "$WORK/stage1/nova_compile.c" "$WORK/stage1/nova_compile"
+
+echo "[self-host] testing nova_compile stage1"
+run_codegen "$WORK/stage1/nova_compile" tests/tools/compile/positive/hello.nv "$WORK/programs/hello.from_nova_compile_stage1.c"
+compile_c "$WORK/programs/hello.from_nova_compile_stage1.c" "$WORK/programs/hello.from_nova_compile_stage1"
+
+actual="$("$WORK/programs/hello.from_nova_compile_stage1")"
+if [ "$actual" != "hello" ]; then
+    echo "nova_compile_stage1 smoke failed"
+    echo "expected: hello"
+    echo "actual: $actual"
+    exit 1
+fi
+echo "[self-host] nova_compile smoke passed"
 
 for program in "${PROGRAMS[@]}"; do
   if [[ -f "$program" ]]; then

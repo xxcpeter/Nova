@@ -5,7 +5,7 @@ import "../lib/parser.nv";
 
 fn main() : void {
     if (arg_count() != 3) {
-        print_str("Usage: nova_parser <input.nv> <output.trace>");
+        nova_runtime_error("Usage: nova_parser <input.nv> <output.out>");
         return;
     }
 

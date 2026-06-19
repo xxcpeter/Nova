@@ -6,7 +6,7 @@ import "../lib/checker.nv";
 
 fn main() : void {
     if (arg_count() != 4) {
-        print_str("Usage: nova_frontend <tokens|parse|check> <input.nv> <output>");
+        nova_runtime_error("Usage: nova_frontend <tokens|parse|check> <input.nv> <output>");
         return;
     }
 

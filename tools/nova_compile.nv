@@ -3,10 +3,11 @@ import "../lib/tokenizer.nv";
 import "../lib/parser.nv";
 import "../lib/checker.nv";
 import "../lib/codegen_c.nv";
+import "../lib/diagnostics.nv";
 
 fn main() : void {
     if (arg_count() != 3) {
-        nova_runtime_error("Usage: nova_codegen <input.nv> <output.c>");
+        nova_runtime_error("Usage: nova_compile <input.nv> <output.c>");
         return;
     }
 

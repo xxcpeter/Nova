@@ -6,7 +6,7 @@ import "../lib/checker.nv";
 
 fn main() : void {
     if (arg_count() != 3) {
-        print_str("Usage: nova_checker <input.nv> <output.check>");
+        nova_runtime_error("Usage: nova_checker <input.nv> <output.check>");
         return;
     }
 
