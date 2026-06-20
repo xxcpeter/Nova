@@ -2,7 +2,7 @@
 
 Nova uses CTest to run both C++ compiler tests and Nova-written tool tests.
 
-This document explains the test layout, common commands, and how to add new tests.
+This document explains the test layout, common commands, and how to add or update tests.
 
 ---
 
@@ -12,31 +12,37 @@ Build first:
 
 ```bash
 cmake -S . -B build
-cmake --build build
+cmake --build build --parallel
 ```
 
 Run all tests:
 
 ```bash
-ctest --test-dir build
-```
-
-Run with verbose output:
-
-```bash
-ctest --test-dir build --output-on-failure
+ctest --test-dir build -j8 --output-on-failure
 ```
 
 Run tests matching a name:
 
 ```bash
-ctest --test-dir build -R nova_tool_codegen
+ctest --test-dir build -R nova_tool_codegen -j8 --output-on-failure
 ```
 
 Run tests with a label:
 
 ```bash
-ctest --test-dir build -L nova_tool
+ctest --test-dir build -L nova_tool -j8 --output-on-failure
+```
+
+Run self-host tests:
+
+```bash
+ctest --test-dir build -L selfhost --output-on-failure
+```
+
+Run the self-host script directly:
+
+```bash
+scripts/self_host.sh
 ```
 
 ---
@@ -50,9 +56,9 @@ C++ compiler tests
 Nova-written tool tests
 ```
 
-The C++ compiler tests validate the main compiler implementation in `src/`.
+The C++ compiler tests validate the seed compiler implementation in `src/`.
 
-The Nova-written tool tests validate tools implemented in Nova under `tools/` and libraries under `lib/`.
+The Nova-written tool tests validate tools under `tools/` and libraries under `lib/`.
 
 ---
 
@@ -60,88 +66,41 @@ The Nova-written tool tests validate tools implemented in Nova under `tools/` an
 
 ### `tests/lexer/`
 
-Tests the C++ lexer.
-
 ```text
 tests/lexer/positive/
 tests/lexer/negative/
 ```
 
-Positive tests compare token output.
-
-Negative tests compare lexer error output.
-
----
-
 ### `tests/parser/`
-
-Tests the C++ parser.
 
 ```text
 tests/parser/positive/
 tests/parser/negative/
 ```
 
-Positive tests compare parse / AST dump output.
-
-Negative tests compare parser diagnostics.
-
----
-
 ### `tests/sema/`
-
-Tests the C++ semantic analyzer.
 
 ```text
 tests/sema/positive/
 tests/sema/negative/
 ```
 
-These tests cover:
-
-```text
-type checking
-function calls
-structs
-enums
-vectors
-returns
-assignments
-conditions
-scope rules
-```
-
----
-
 ### `tests/codegen/`
-
-Tests the C++ compiler code generator.
 
 ```text
 tests/codegen/positive/
 ```
 
-These tests compile Nova programs to C, compile the generated C, run the executable, and compare stdout.
-
----
+These compile Nova programs to C, compile the generated C, run the executable, and compare stdout.
 
 ### `tests/import/`
-
-Tests the C++ source loader and import/include system.
 
 ```text
 tests/import/positive/
 tests/import/negative/
 ```
 
-Important cases:
-
-```text
-simple import
-diamond import / include once
-missing import
-cyclic import
-```
+These validate source loader import behavior, including missing import, cyclic import, duplicate import, and path normalization.
 
 ---
 
@@ -153,11 +112,28 @@ Nova-written tool tests live under:
 tests/tools/
 ```
 
-These tests compile a Nova tool with the C++ compiler, compile the generated C tool, run it, and compare its output.
+The current layout is:
+
+```text
+tests/tools/<tool>/positive/
+tests/tools/<tool>/negative/
+tests/tools/frontend/positive/<mode>/
+tests/tools/frontend/negative/<mode>/
+tests/tools/frontend_import/positive/<mode>/<case>/
+tests/tools/frontend_import/negative/<mode>/<case>/
+tests/tools/compile/positive/
+tests/tools/cli/negative/
+```
 
 ---
 
-### `tests/tools/tokenizer/`
+## 5. Tool Test Groups
+
+### Tokenizer
+
+```text
+tests/tools/tokenizer/positive/
+```
 
 Tests:
 
@@ -166,215 +142,86 @@ tools/nova_tokenizer.nv
 lib/tokenizer.nv
 ```
 
-The tool reads a Nova source file and outputs tokens.
-
-Typical files:
+### Parser
 
 ```text
-tests/tools/tokenizer/basic.nv
-tests/tools/tokenizer/basic.tok
+tests/tools/parser/positive/
+tests/tools/parser/negative/
 ```
-
----
-
-### `tests/tools/expr_parser/`
 
 Tests:
 
 ```text
-tools/nova_expr_parser.nv
+tools/nova_parser.nv
 lib/parser.nv
 lib/parse_tree.nv
 ```
 
-These tests validate expression-aware parse trees.
-
-Typical files:
-
-```text
-tests/tools/expr_parser/expression_precedence.nv
-tests/tools/expr_parser/expression_precedence.out
-```
-
-Negative parser tests are under:
-
-```text
-tests/tools/expr_parser/negative/
-```
-
----
-
-### `tests/tools/checker/`
-
-Tests early Nova-written checker behavior.
+### Checker
 
 ```text
 tests/tools/checker/positive/
 tests/tools/checker/negative/
 ```
 
-These focus mostly on declaration-level and structural checks.
+Early declaration and structural checks.
 
----
-
-### `tests/tools/typecheck/`
-
-Tests expression-level type checking in the Nova-written checker.
+### Typecheck
 
 ```text
 tests/tools/typecheck/positive/
 tests/tools/typecheck/negative/
 ```
 
-These cover:
+Expression-level checker tests.
+
+### Frontend
 
 ```text
-let initializer type checking
-return type checking
-if / while conditions
-undefined variables
-function call arguments
-field access
-enum member access
-vec intrinsic type checking
-```
-
----
-
-### `tests/tools/frontend/`
-
-Tests:
-
-```text
-tools/nova_frontend.nv
-```
-
-Frontend modes:
-
-```text
-tokens
-parse
-check
-```
-
-Layout:
-
-```text
-tests/tools/frontend/tokens/
-tests/tools/frontend/parse/
-tests/tools/frontend/check/
-tests/tools/frontend/negative/
+tests/tools/frontend/positive/tokens/
+tests/tools/frontend/positive/parse/
+tests/tools/frontend/positive/check/
+tests/tools/frontend/negative/parse/
+tests/tools/frontend/negative/check/
 tests/tools/frontend/smoke/
 ```
 
-Smoke tests check that the Nova frontend can check Nova tools.
-Smoke expected files usually only require output beginning with:
+### Frontend import
 
 ```text
-Check OK
+tests/tools/frontend_import/positive/check/<case>/
+tests/tools/frontend_import/negative/check/<case>/
 ```
 
----
-
-### `tests/tools/frontend_import/`
-
-Tests frontend behavior on source files that use Nova imports.
+### Nova codegen
 
 ```text
-tests/tools/frontend_import/check/
-tests/tools/frontend_import/negative/
+tests/tools/codegen/positive/
 ```
 
-These validate Nova-side import expansion through `lib/source_loader.nv`.
+These compile `tools/nova_codegen.nv`, use it to generate C, compile the generated C, run the executable, and compare stdout.
 
----
-
-### `tests/tools/codegen/`
-
-Tests:
+### Nova compile driver
 
 ```text
-tools/nova_codegen.nv
-lib/codegen_c.nv
+tests/tools/compile/positive/
 ```
 
-These tests compile the Nova-written codegen tool, use it to generate C from a Nova test program, compile that generated C, run it, and compare stdout.
+These test `tools/nova_compile.nv`.
 
-Typical files:
+### CLI tests
 
 ```text
-tests/tools/codegen/hello.nv
-tests/tools/codegen/hello.out
+tests/tools/cli/negative/
 ```
 
-Covered features include:
-
-```text
-functions
-recursion
-if / while
-bool logic
-strings
-runtime calls
-structs
-enums
-vectors
-vec<int>
-vec<str>
-vec<struct>
-```
-
----
-
-## 5. Common CTest Commands
-
-Run all tests:
-
-```bash
-ctest --test-dir build
-```
-
-Run all Nova tool tests:
-
-```bash
-ctest --test-dir build -L nova_tool
-```
-
-Run Nova codegen tool tests:
-
-```bash
-ctest --test-dir build -R nova_tool_codegen
-```
-
-Run import tests:
-
-```bash
-ctest --test-dir build -R import
-```
-
-Run frontend tests:
-
-```bash
-ctest --test-dir build -R nova_tool_frontend
-```
-
-Run checker/typecheck tests:
-
-```bash
-ctest --test-dir build -R "nova_tool_(checker|typecheck)"
-```
-
-Run with failure details:
-
-```bash
-ctest --test-dir build --output-on-failure
-```
+These compile Nova-written tools and check bad-args usage diagnostics.
 
 ---
 
 ## 6. Test Drivers
 
-CTest helpers live in:
+CTest helper scripts live in:
 
 ```text
 cmake/
@@ -383,192 +230,244 @@ cmake/
 Important drivers:
 
 ```text
+RunTextCompareTest.cmake
 RunCodegenTest.cmake
 RunNovaToolTest.cmake
-RunNovaToolNegativeTest.cmake
 RunNovaCodegenToolTest.cmake
-RunTextCompareTest.cmake
+RunNovaToolCliTest.cmake
 ```
-
----
 
 ### `RunNovaToolTest.cmake`
 
-Used for positive Nova tool tests.
+Used for positive and negative Nova tool tests.
 
 Typical flow:
 
 ```text
 1. nova_compile tool.nv -> tool.c
 2. cc tool.c runtime/nova_runtime.c -> tool executable
-3. run tool executable on INPUT
-4. compare output file with EXPECT
+3. run tool executable
+4. compare output file or stderr with EXPECT
 ```
 
-Supports optional:
+Negative tests set:
 
 ```text
-TOOL_ARGS
-EXPECT_PREFIX
-```
-
-`TOOL_ARGS` is used for tools like:
-
-```bash
-nova_frontend check input.nv output.check
-```
-
-`EXPECT_PREFIX` is used for smoke tests where only the beginning of output matters.
-
----
-
-### `RunNovaToolNegativeTest.cmake`
-
-Used for negative Nova tool tests.
-
-Typical flow:
-
-```text
-1. compile Nova tool
-2. run it on invalid input
-3. expect failure
-4. compare stderr with .err file
-```
-
-Often uses:
-
-```text
+EXPECT_FAILURE=ON
 STRIP_RUNTIME_PREFIX=ON
 ```
 
-to remove the outer `Nova runtime error:` prefix from expected diagnostics.
-
----
-
 ### `RunNovaCodegenToolTest.cmake`
 
-Used for `tools/nova_codegen.nv`.
+Used for Nova-written codegen/compile style tests.
 
 Flow:
 
 ```text
-1. compile tools/nova_codegen.nv -> nova_codegen.c
-2. compile nova_codegen.c -> nova_codegen executable
-3. run nova_codegen input.nv generated.c
-4. compile generated.c -> generated executable
-5. run generated executable
-6. compare stdout with expected .out
+1. compile Nova tool
+2. run tool on input.nv -> generated C
+3. compile generated C
+4. run final executable
+5. compare stdout
 ```
 
-This validates the full Nova-written codegen pipeline.
+### `RunNovaToolCliTest.cmake`
 
----
+Used for CLI bad-args tests.
 
-## 7. Adding a C++ Codegen Test
-
-Add files under:
+Flow:
 
 ```text
-tests/codegen/positive/
-```
-
-Example:
-
-```text
-tests/codegen/positive/example.nv
-tests/codegen/positive/example.out
-```
-
-Then add the test in `CMakeLists.txt` using the existing codegen helper.
-
-The `.out` file should contain the exact expected stdout.
-
----
-
-## 8. Adding a Nova Tool Codegen Test
-
-Add files under:
-
-```text
-tests/tools/codegen/
-```
-
-Example:
-
-```text
-tests/tools/codegen/example.nv
-tests/tools/codegen/example.out
-```
-
-Then add:
-
-```cmake
-add_nova_codegen_tool_test(example)
-```
-
-to `CMakeLists.txt`.
-
-The test will:
-
-```text
-compile tools/nova_codegen.nv
-run it on example.nv
-compile generated C
-run generated executable
-compare stdout with example.out
+1. compile Nova tool
+2. run tool with CLI_ARGS
+3. expect failure
+4. compare stderr
 ```
 
 ---
 
-## 9. Adding a Frontend Test
+## 7. Golden Files
 
-For token mode:
+Tests compare against source-controlled golden files:
 
 ```text
-tests/tools/frontend/tokens/name.nv
-tests/tools/frontend/tokens/name.tok
+*.out
+*.err
+*.tok
+*.check
 ```
+
+Do not add these patterns to `.gitignore`.
+
+---
+
+## 8. Golden Update Policy
+
+Only update golden files when behavior intentionally changes:
+
+```text
+diagnostic format changes
+source location correction
+parse/tree output changes
+runtime/builtin behavior changes
+expected stdout changes
+```
+
+Recommended workflow:
+
+```text
+1. Run the failing test.
+2. Confirm the actual output is the correct new behavior.
+3. Manually update the matching golden file.
+4. Rerun the targeted test.
+5. Rerun the relevant label group.
+6. Run full CTest.
+```
+
+Do not update golden files to match temporary debug output.
+
+---
+
+## 9. Common CTest Commands
+
+Run all:
+
+```bash
+ctest --test-dir build -j8 --output-on-failure
+```
+
+Nova tool tests:
+
+```bash
+ctest --test-dir build -L nova_tool -j8 --output-on-failure
+```
+
+Codegen tests:
+
+```bash
+ctest --test-dir build -L codegen -j8 --output-on-failure
+```
+
+Import tests:
+
+```bash
+ctest --test-dir build -L import -j8 --output-on-failure
+```
+
+Self-host tests:
+
+```bash
+ctest --test-dir build -L selfhost --output-on-failure
+```
+
+CLI tests:
+
+```bash
+ctest --test-dir build -L cli --output-on-failure
+```
+
+---
+
+## 10. Adding a C++ Codegen Test
 
 Add:
 
-```cmake
-add_nova_frontend_test(tokens name tok)
-```
-
-For parse mode:
-
 ```text
-tests/tools/frontend/parse/name.nv
-tests/tools/frontend/parse/name.out
+tests/codegen/positive/name.nv
+tests/codegen/positive/name.out
 ```
+
+Then register:
+
+```cmake
+add_nova_cpp_codegen_positive_test(name)
+```
+
+---
+
+## 11. Adding a Nova Codegen Tool Test
 
 Add:
 
-```cmake
-add_nova_frontend_test(parse name out)
-```
-
-For check mode:
-
 ```text
-tests/tools/frontend/check/name.nv
-tests/tools/frontend/check/name.check
+tests/tools/codegen/positive/name.nv
+tests/tools/codegen/positive/name.out
 ```
+
+Then register:
+
+```cmake
+add_nova_codegen_tool_test(name)
+```
+
+---
+
+## 12. Adding a Nova Compile Tool Test
 
 Add:
 
-```cmake
-add_nova_frontend_test(check name check)
+```text
+tests/tools/compile/positive/name.nv
+tests/tools/compile/positive/name.out
 ```
 
-For negative tests:
+Then register:
+
+```cmake
+add_nova_compile_tool_test(name)
+```
+
+---
+
+## 13. Adding a Frontend Test
+
+Positive token mode:
+
+```text
+tests/tools/frontend/positive/tokens/name.nv
+tests/tools/frontend/positive/tokens/name.tok
+```
+
+Register:
+
+```cmake
+add_nova_frontend_positive_test(tokens name tok)
+```
+
+Positive parse mode:
+
+```text
+tests/tools/frontend/positive/parse/name.nv
+tests/tools/frontend/positive/parse/name.out
+```
+
+Register:
+
+```cmake
+add_nova_frontend_positive_test(parse name out)
+```
+
+Positive check mode:
+
+```text
+tests/tools/frontend/positive/check/name.nv
+tests/tools/frontend/positive/check/name.check
+```
+
+Register:
+
+```cmake
+add_nova_frontend_positive_test(check name check)
+```
+
+Negative test:
 
 ```text
 tests/tools/frontend/negative/<mode>/name.nv
 tests/tools/frontend/negative/<mode>/name.err
 ```
 
-Add:
+Register:
 
 ```cmake
 add_nova_frontend_negative_test(<mode> name)
@@ -576,147 +475,103 @@ add_nova_frontend_negative_test(<mode> name)
 
 ---
 
-## 10. Adding an Import Test
+## 14. Adding an Import Test
 
-Positive import tests live under:
+Positive import tests:
 
 ```text
 tests/import/positive/<name>/
+  main.nv
+  main.out
+  helper files...
 ```
 
-A typical layout:
+Register:
 
-```text
-main.nv
-main.out
-helper.nv
+```cmake
+add_nova_import_codegen_positive_test(name)
 ```
 
-Negative import tests live under:
+Negative parse import tests:
 
 ```text
 tests/import/negative/<name>/
+  main.nv
+  main.err
 ```
 
-A typical layout:
+Register:
 
-```text
-main.nv
-main.err
+```cmake
+add_nova_import_parse_negative_test(name)
 ```
 
-Important import cases:
+Negative sema import tests:
 
-```text
-missing imported file
-cyclic import
-diamond import
-duplicate include
-relative path resolution
+```cmake
+add_nova_import_sema_negative_test(name)
 ```
 
 ---
 
-## 11. Golden Files
+## 15. Adding a CLI Test
 
-Many tests compare against golden output files:
-
-```text
-*.out
-*.err
-*.tok
-*.check
-```
-
-These files are source-controlled and should not be ignored by `.gitignore`.
-
-Do not add these patterns to `.gitignore`:
+Add:
 
 ```text
-*.out
-*.err
-*.tok
-*.check
+tests/tools/cli/negative/name.err
 ```
 
-They are part of the test suite.
+Register:
+
+```cmake
+add_nova_tool_cli_negative_test(group tool name)
+```
+
+Expected files usually omit the runtime prefix if the test runner strips it:
+
+```text
+Usage: nova_compile <input.nv> <output.c>
+```
 
 ---
 
-## 12. Debugging Failed Tests
+## 16. Debugging Failed Tests
 
-Run a failing test with verbose output:
+Run a failing test with output:
 
 ```bash
 ctest --test-dir build -R test_name --output-on-failure
 ```
 
-Inspect the generated work directory. Nova tool tests usually write temporary outputs under:
+Nova tool tests write work files under:
 
 ```text
 build/nova_tool_tests/
 ```
 
-For codegen tests, inspect generated C:
-
-```text
-build/nova_tool_tests/codegen_<name>/
-```
-
 Common files include:
 
 ```text
-nova_codegen.c
-nova_codegen_exe
-<test>.generated.c
-<test>_generated_exe
+tool.c
+tool executable
+generated C
+generated executable
+actual output
 ```
 
-If generated C fails to compile, the test driver prints the generated C source.
+If generated C fails to compile, inspect the work directory and the test driver output.
 
 ---
 
-## 13. Expected Failure Style
-
-Negative tests should prefer stable diagnostics.
-
-Examples:
-
-```text
-ParseError at 2:19: expected expression
-CheckerError at 2:15: undefined variable 'x'
-CodegenError: unsupported type in tiny codegen: Point
-ImportError: cannot open import 'missing.nv'
-```
-
-When running through generated Nova tools, runtime errors may be wrapped as:
-
-```text
-Nova runtime error: ...
-```
-
-Most negative test drivers can strip this with:
-
-```cmake
--DSTRIP_RUNTIME_PREFIX=ON
-```
-
----
-
-## 14. Recommended Final Sweep
+## 17. Final Milestone Sweep
 
 Before marking a milestone complete, run:
 
 ```bash
-ctest --test-dir build
+rm -rf build tmp
+cmake -S . -B build
+cmake --build build --parallel
+ctest --test-dir build -j8 --output-on-failure
+scripts/self_host.sh
 ```
-
-Then run targeted groups:
-
-```bash
-ctest --test-dir build -L nova_tool
-ctest --test-dir build -R nova_tool_codegen
-ctest --test-dir build -R import
-```
-
-All should pass before the Phase 1 bootstrap milestone is considered complete.

@@ -1,6 +1,6 @@
 # Nova Architecture
 
-Nova is a small educational programming language and compiler project. The current project state is a Phase 1 bootstrap prototype: the main compiler is implemented in C++, while several compiler tools are now implemented in Nova itself.
+Nova is a small educational programming language and compiler project. The current state is a Phase 2 self-hosting milestone: the main seed compiler is still implemented in C++, while a growing frontend/codegen toolchain is implemented in Nova itself.
 
 ---
 
@@ -9,14 +9,14 @@ Nova is a small educational programming language and compiler project. The curre
 Nova currently has two implementation layers:
 
 ```text
-C++ compiler
+C++ seed compiler
   source -> import expansion -> lexer -> parser -> sema -> C codegen
 
-Nova tools
-  source -> import expansion -> tokenizer -> parser -> checker -> optional C codegen
+Nova-written toolchain
+  source -> import expansion -> tokenizer -> parser -> checker -> C codegen
 ```
 
-The C++ compiler is still the primary compiler. The Nova-written tools demonstrate that Nova can implement meaningful parts of its own frontend and a prototype backend.
+The C++ compiler remains the seed compiler. The Nova-written tools demonstrate that Nova can implement meaningful parts of its own compiler pipeline and participate in a repeatable self-hosting workflow.
 
 ---
 
@@ -27,16 +27,17 @@ include/   C++ compiler headers
 src/       C++ compiler implementation and command-line tools
 runtime/   C runtime used by generated programs
 lib/       Nova-written reusable compiler libraries
-tools/     Nova-written command-line tools and editor support
+tools/     Nova-written command-line tools and VS Code extension
 tests/     C++ compiler tests and Nova tool tests
 cmake/     CTest helper scripts
+scripts/   build, regression, and self-host scripts
 docs/      project documentation and historical assignments
 examples/  small Nova example programs
 ```
 
 ---
 
-## C++ Compiler
+## C++ Seed Compiler
 
 The C++ compiler pipeline is:
 
@@ -56,7 +57,7 @@ The main command is:
 ./build/nova_compile input.nv output.c
 ```
 
-The generated C is compiled together with the runtime:
+The generated C is compiled with the runtime:
 
 ```bash
 cc output.c runtime/nova_runtime.c -I runtime -o program
@@ -71,21 +72,33 @@ nova_sema
 nova_compile
 ```
 
-All modern C++ entry points use the shared source loader, so they support `import "path.nv";`.
+All modern C++ entry points use the shared source loader and support `import "path.nv";`.
 
 ---
 
 ## Import System
 
-Nova currently supports a minimal source-level include system:
+Nova currently supports a source-level include system:
 
 ```nova
 import "relative/path.nv";
 ```
 
-Imports are resolved relative to the importing file, expanded before lexing, included once, and checked for cycles.
+Imports are resolved relative to the importing file, path-normalized, expanded before lexing, included once, and checked for cycles.
 
-This is not a full module system. There are no namespaces, exports, aliases, package search paths, or separate compilation. After expansion, all declarations share one global namespace.
+This is not a full module system. There are no namespaces, exports, aliases, package search paths, or separate compilation. After import expansion, declarations share one global namespace.
+
+---
+
+## Source-aware Diagnostics
+
+Tokens and parse nodes now carry source file information. Diagnostics generally use:
+
+```text
+file:line:column: ErrorKind: message
+```
+
+This applies across imported source as well as root files. The system does not yet provide rich code frames, multi-span diagnostics, warnings, or fix-it suggestions.
 
 ---
 
@@ -101,12 +114,13 @@ lib/parser.nv         parse_program_tree
 lib/checker.nv        declaration and expression checker
 lib/codegen_c.nv      prototype C codegen
 lib/source_loader.nv  Nova-side import expansion
-lib/diagnostics.nv    ParseError / CheckerError helpers
+lib/diagnostics.nv    diagnostic helpers
 ```
 
 These files are imported by Nova tools, for example:
 
 ```nova
+import "../lib/source_loader.nv";
 import "../lib/tokenizer.nv";
 import "../lib/parser.nv";
 import "../lib/checker.nv";
@@ -114,15 +128,23 @@ import "../lib/checker.nv";
 
 ---
 
-## Nova Frontend
+## Nova-written Tools
 
-The main Nova-written frontend driver is:
+Main Nova-written tools:
 
 ```text
+tools/nova_tokenizer.nv
+tools/nova_parser.nv
+tools/nova_checker.nv
 tools/nova_frontend.nv
+tools/nova_codegen.nv
+tools/nova_compile.nv
+tools/nova_build.nv
 ```
 
-It supports three modes:
+### Frontend
+
+`tools/nova_frontend.nv` supports:
 
 ```bash
 nova_frontend tokens input.nv output.tok
@@ -130,45 +152,41 @@ nova_frontend parse  input.nv output.out
 nova_frontend check  input.nv output.check
 ```
 
-The frontend pipeline is:
+### Codegen
+
+`tools/nova_codegen.nv` is a backend/codegen-oriented regression tool. It reads Nova source and writes C.
+
+### Compile driver
+
+`tools/nova_compile.nv` is the Nova-written compile-to-C driver. It represents the user-facing Nova-written compiler pipeline:
 
 ```text
-source
-  -> load_source_with_imports
-  -> tokenize
-  -> parse_program_tree
-  -> check_program
+source -> imports -> tokenize -> parse -> check -> gen C -> write output.c
 ```
+
+### Build driver prototype
+
+`tools/nova_build.nv` is a prototype build driver. It uses runtime process/filesystem APIs and can delegate to the self-host workflow.
 
 ---
 
-## Nova Codegen Prototype
+## Self-hosting Workflow
 
-The Nova-written codegen tool is:
+The canonical self-hosting script is:
 
-```text
-tools/nova_codegen.nv
+```bash
+scripts/self_host.sh
 ```
 
-It uses:
+It builds:
 
 ```text
-lib/codegen_c.nv
+C++ seed compiler -> nova_codegen_stage0
+nova_codegen_stage0 -> nova_codegen_stage1
+nova_codegen_stage1 -> nova_codegen_stage2
 ```
 
-The pipeline is:
-
-```text
-source
-  -> load_source_with_imports
-  -> tokenize
-  -> parse_program_tree
-  -> check_program
-  -> gen_c_program
-  -> output.c
-```
-
-The prototype supports a useful subset of Nova, including functions, structs, enums, vectors, control flow, runtime calls, and basic expressions. It is not yet a complete replacement for the C++ codegen backend.
+It then uses stage1 and stage2 codegen to compile representative programs and compare behavior. It also builds a `nova_compile_stage1` smoke driver.
 
 ---
 
@@ -181,27 +199,47 @@ runtime/nova_runtime.c
 runtime/nova_runtime.h
 ```
 
-The runtime provides printing, strings, buffers, file I/O, command-line arguments, and runtime error handling.
+The runtime provides:
 
-Generated C includes:
-
-```c
-#include "nova_runtime.h"
+```text
+printing
+strings
+file I/O
+buffers
+command-line arguments
+runtime errors
+process command execution
+basic filesystem helpers
 ```
+
+Typed vector operations are compiler-known builtins and are generated as per-type C helpers.
+
+---
+
+## VS Code Tooling
+
+A lightweight VS Code extension lives in:
+
+```text
+tools/vscode-nova-syntax/
+```
+
+It provides `.nv` file association, TextMate syntax highlighting, snippets, tasks/problem matcher examples, and editor configuration. It is not a full language server.
 
 ---
 
 ## Testing
 
-Nova uses CTest. Tests are split broadly into:
+Nova uses CTest. Test groups include:
 
 ```text
-tests/lexer/      C++ lexer tests
-tests/parser/     C++ parser tests
-tests/sema/       C++ semantic tests
-tests/codegen/    C++ codegen tests
-tests/import/     import/source loader tests
-tests/tools/      Nova-written tool tests
+tests/lexer/              C++ lexer tests
+tests/parser/             C++ parser tests
+tests/sema/               C++ semantic tests
+tests/codegen/            C++ codegen tests
+tests/import/             import/source loader tests
+tests/tools/              Nova-written tool tests
+scripts/self_host.sh      self-hosting workflow
 ```
 
 Detailed test instructions live in `docs/testing.md`.
@@ -210,18 +248,17 @@ Detailed test instructions live in `docs/testing.md`.
 
 ## Current Milestone
 
-The current Phase 1 milestone demonstrates:
+The Phase 2 milestone demonstrates:
 
 ```text
-C++ compiler compiles Nova-written tools.
-Nova frontend checks Nova source.
-Nova codegen generates C.
-Generated C compiles and runs.
-Import-based Nova libraries work.
-CTest passes.
+C++ seed compiler compiles Nova-written tools.
+Nova-written frontend checks Nova source.
+Nova-written codegen generates C.
+Nova-written compile driver compiles Nova source to C.
+Stage0/stage1/stage2 codegen workflow is repeatable.
+Runtime/builtin surface is documented.
+CTest and self-host validation pass.
 ```
-
-Detailed bootstrap commands live in `docs/bootstrap.md`.
 
 ---
 
@@ -231,9 +268,10 @@ Important limitations are documented in `docs/limitations.md`. The short version
 
 ```text
 import is textual include, not a true module system
-diagnostics do not have source maps yet
-Nova codegen is a prototype backend
+diagnostics are source-aware but not rich code-frame diagnostics
+Nova codegen is a prototype C backend
 nested vec is not supported
 generated vector memory is not freed
-VS Code support is syntax highlighting only
+run_command is shell-based and intended for trusted tooling
+VS Code support is lightweight, not LSP
 ```
