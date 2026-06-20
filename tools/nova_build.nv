@@ -1,0 +1,51 @@
+fn main() : void {
+    if (arg_count() < 2) {
+        nova_runtime_error("Usage: nova_build <self-host|compile|test> [args...]");
+        return;
+    }
+
+    let mode : str = arg_get(1);
+
+    if (mode == "self-host") {
+        if (arg_count() != 2) {
+            nova_runtime_error("Usage: nova_build <self-host|compile|test> [args...]");
+            return;
+        }
+
+        let code : int = run_command("scripts/self_host.sh");
+        if (code != 0) {
+            nova_runtime_error("self-host command failed");
+        }
+
+    } else if (mode == "compile") {
+        if (arg_count() != 4) {
+            nova_runtime_error("Usage: nova_build <self-host|compile|test> [args...]");
+            return;
+        }
+
+        let input : str = arg_get(2);
+        let output : str = arg_get(3);
+        let command : str = "./build/nova_compile " + input + " " + output;
+        let code : int = run_command(command);
+
+        if (code != 0) {
+            nova_runtime_error("compile command failed");
+        }
+
+    } else if (mode == "test") {
+        if (arg_count() != 2) {
+            nova_runtime_error("Usage: nova_build <self-host|compile|test> [args...]");
+            return;
+        }
+
+        let code : int = run_command("ctest --test-dir build -j8 --output-on-failure");
+        if (code != 0) {
+            nova_runtime_error("test command failed");
+        }
+
+    } else {
+        nova_runtime_error("Usage: nova_build <self-host|compile|test> [args...]");
+    }
+
+    return;
+}

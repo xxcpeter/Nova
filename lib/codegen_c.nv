@@ -182,6 +182,21 @@ fn infer_runtime_call_type(name: str) : str {
     if (str_eq(name, "buf_to_str")) {
         return "str";
     }
+    if (str_eq(name, "run_command")) {
+        return "int";
+    }
+    if (str_eq(name, "file_exists")) {
+        return "bool";
+    }
+    if (str_eq(name, "dir_exists")) {
+        return "bool";
+    }
+    if (str_eq(name, "make_dir")) {
+        return "void";
+    }
+    if (str_eq(name, "remove_file")) {
+        return "void";
+    }
     return "";
 }
 

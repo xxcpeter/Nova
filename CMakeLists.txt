@@ -771,3 +771,11 @@ add_nova_tool_cli_negative_test(compile nova_compile nova_compile_bad_args)
 add_nova_tool_cli_negative_test(tokenizer nova_tokenizer nova_tokenizer_bad_args)
 add_nova_tool_cli_negative_test(parser nova_parser nova_parser_bad_args)
 add_nova_tool_cli_negative_test(checker nova_checker nova_checker_bad_args)
+
+# step 29
+add_nova_cpp_codegen_positive_test(runtime_process_filesystem)
+add_nova_codegen_tool_test(runtime_process_filesystem)
+add_nova_typecheck_positive_test(runtime_process_filesystem)
+
+add_nova_typecheck_positive_test(nova_build_cli)
+add_nova_tool_cli_negative_test(build nova_build nova_build_bad_args)

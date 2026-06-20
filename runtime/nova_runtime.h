@@ -28,4 +28,10 @@ int arg_count();
 const char* arg_get(int index);
 void nova_runtime_init(int argc, char** argv);
 
+int run_command(const char* command);
+bool file_exists(const char* path);
+bool dir_exists(const char* path);
+void make_dir(const char* path);
+void remove_file(const char* path);
+
 void nova_runtime_error(const char* message);

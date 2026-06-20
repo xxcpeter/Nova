@@ -1,0 +1,10 @@
+fn main() : void {
+    let code : int = run_command("true");
+    let a : bool = file_exists("README.md");
+    let b : bool = dir_exists("runtime");
+
+    make_dir("./tmp/nova_runtime_api_test");
+    remove_file("./tmp/nova_runtime_api_test_file.txt");
+
+    return;
+}

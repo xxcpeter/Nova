@@ -1,0 +1,36 @@
+fn main() : void {
+    let code : int = run_command("true");
+    print_int(code);
+
+    if (file_exists("../README.md")) {
+        print_str("file yes");
+    } else {
+        print_str("file no");
+    }
+
+    if (dir_exists("../runtime")) {
+        print_str("dir yes");
+    } else {
+        print_str("dir no");
+    }
+
+    make_dir("nova_runtime_api_test");
+    if (dir_exists("nova_runtime_api_test")) {
+        print_str("made dir");
+    }
+
+    write_file("nova_runtime_api_test/delete_me.txt", "temp");
+    if (file_exists("nova_runtime_api_test/delete_me.txt")) {
+        print_str("file made");
+    }
+
+    remove_file("nova_runtime_api_test/delete_me.txt");
+    if (!file_exists("nova_runtime_api_test/delete_me.txt")) {
+        print_str("file removed");
+    }
+
+    remove_file("nova_runtime_api_test/missing.txt");
+    print_str("missing remove ok");
+
+    return;
+}

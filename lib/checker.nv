@@ -452,6 +452,12 @@ fn is_assignable_expr(expr: ParseNode, symbols: SymbolTables, stack: ScopeStack)
 // arg_count() -> int
 // arg_get(int) -> str
 
+// run_command(str) -> int
+// file_exists(str) -> bool
+// dir_exists(str) -> bool
+// make_dir(str) -> void
+// remove_file(str) -> void
+
 // nova_runtime_error(str) -> void
 fn is_runtime_builtin(name: str) : bool {
     return str_eq(name, "print_int") || str_eq(name, "print_str") ||
@@ -463,6 +469,8 @@ fn is_runtime_builtin(name: str) : bool {
             str_eq(name, "buf_new") || str_eq(name, "buf_push_str") || 
             str_eq(name, "buf_push_int") || str_eq(name, "buf_to_str") ||
             str_eq(name, "arg_count") || str_eq(name, "arg_get") || 
+            str_eq(name, "run_command") || str_eq(name, "file_exists") || str_eq(name, "dir_exists") || 
+            str_eq(name, "make_dir") || str_eq(name, "remove_file") || 
             str_eq(name, "nova_runtime_error");
 }
 
@@ -590,6 +598,36 @@ fn infer_runtime_builtin_call(expr: ParseNode, symbols: SymbolTables, stack: Sco
         }
         infer_expr_type_expected(vec_get(expr.children, 0), symbols, stack, "int", "arg_get");
         return "str";
+    } else if (str_eq(expr.name, "run_command")) {
+        if (vec_len(expr.children) != 1) {
+            checker_error_at(expr.file, expr.line, expr.column, "run_command expects 1 argument");
+        }
+        infer_expr_type_expected(vec_get(expr.children, 0), symbols, stack, "str", "run_command");
+        return "int";
+    } else if (str_eq(expr.name, "file_exists")) {
+        if (vec_len(expr.children) != 1) {
+            checker_error_at(expr.file, expr.line, expr.column, "file_exists expects 1 argument");
+        }
+        infer_expr_type_expected(vec_get(expr.children, 0), symbols, stack, "str", "file_exists");
+        return "bool";
+    } else if (str_eq(expr.name, "dir_exists")) {
+        if (vec_len(expr.children) != 1) {
+            checker_error_at(expr.file, expr.line, expr.column, "dir_exists expects 1 argument");
+        }
+        infer_expr_type_expected(vec_get(expr.children, 0), symbols, stack, "str", "dir_exists");
+        return "bool";
+    } else if (str_eq(expr.name, "make_dir")) {
+        if (vec_len(expr.children) != 1) {
+            checker_error_at(expr.file, expr.line, expr.column, "make_dir expects 1 argument");
+        }
+        infer_expr_type_expected(vec_get(expr.children, 0), symbols, stack, "str", "make_dir");
+        return "void";
+    } else if (str_eq(expr.name, "remove_file")) {
+        if (vec_len(expr.children) != 1) {
+            checker_error_at(expr.file, expr.line, expr.column, "remove_file expects 1 argument");
+        }
+        infer_expr_type_expected(vec_get(expr.children, 0), symbols, stack, "str", "remove_file");
+        return "void";
     } else if (str_eq(expr.name, "nova_runtime_error")) {
         if (vec_len(expr.children) != 1) {
             checker_error_at(expr.file, expr.line, expr.column, "nova_runtime_error expects 1 argument");

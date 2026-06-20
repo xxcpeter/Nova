@@ -1,0 +1,9 @@
+// just run the new runtime functions to make sure they work and don't cause any type errors
+fn main() : void {
+    run_command("mkdir -p build");
+    let code : int = run_command("./build/nova_build test");
+    file_exists("build/tests/tools/typecheck/positive/nova_build_cli.nv");
+    make_dir("build/test_dir");
+    dir_exists("build/test_dir");
+    remove_file("build/test_dir");
+}

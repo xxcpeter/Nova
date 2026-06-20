@@ -2,6 +2,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/wait.h>
+#include <sys/stat.h>
+#include <errno.h>
+#include <unistd.h>
 
 #define MAX_BUFFERS 1024
 
@@ -227,6 +231,53 @@ void nova_runtime_init(int argc, char** argv) {
     rt_argc = argc;
     rt_argv = argv;
 }
+
+
+int run_command(const char* command) {
+    int status = system(command);
+    if (status == -1) {
+        runtime_error("failed to execute command");
+    }
+#ifdef WIFEXITED
+    if (WIFEXITED(status)) {
+        return WEXITSTATUS(status);
+    }
+#endif
+    return status;
+}
+
+
+bool file_exists(const char* path) {
+    struct stat fs;
+    return stat(path, &fs) == 0 && S_ISREG(fs.st_mode) ? 1 : 0;
+}
+
+
+bool dir_exists(const char* path) {
+    struct stat fs;
+    return stat(path, &fs) == 0 && S_ISDIR(fs.st_mode) ? 1 : 0;
+}
+
+
+void make_dir(const char* path) {
+    if (mkdir(path, 0755) != 0) {
+        if (errno == EEXIST && dir_exists(path)) {
+            return;
+        }
+        runtime_error(str_concat("failed to create directory: ", path));
+    }
+}
+
+
+void remove_file(const char* path) {
+    if (remove(path) != 0) {
+        if (errno == ENOENT) {
+            return;
+        }
+        runtime_error(str_concat("failed to remove file: ", path));
+    }
+}
+
 
 void nova_runtime_error(const char *message)
 {

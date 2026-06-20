@@ -112,6 +112,12 @@ void SemanticAnalyzer::install_builtin_functions() {
     functions_.emplace("arg_count", FunctionSignature{"arg_count", {}, Type{ TypeKind::Int }, SourceLocation{"<builtin>", 0, 0}});
     functions_.emplace("arg_get", FunctionSignature{"arg_get", {Type{ TypeKind::Int }}, Type{ TypeKind::Str }, SourceLocation{"<builtin>", 0, 0}});
 
+    functions_.emplace("run_command", FunctionSignature{"run_command", {Type{ TypeKind::Str }}, Type{ TypeKind::Int }, SourceLocation{"<builtin>", 0, 0}});
+    functions_.emplace("file_exists", FunctionSignature{"file_exists", {Type{ TypeKind::Str }}, Type{ TypeKind::Bool }, SourceLocation{"<builtin>", 0, 0}});
+    functions_.emplace("dir_exists", FunctionSignature{"dir_exists", {Type{ TypeKind::Str }}, Type{ TypeKind::Bool }, SourceLocation{"<builtin>", 0, 0}});
+    functions_.emplace("make_dir", FunctionSignature{"make_dir", {Type{ TypeKind::Str }}, Type{ TypeKind::Void }, SourceLocation{"<builtin>", 0, 0}});
+    functions_.emplace("remove_file", FunctionSignature{"remove_file", {Type{ TypeKind::Str }}, Type{ TypeKind::Void }, SourceLocation{"<builtin>", 0, 0}});
+
     functions_.emplace("nova_runtime_error", FunctionSignature{"nova_runtime_error", {Type{ TypeKind::Str }}, Type{ TypeKind::Void }, SourceLocation{"<builtin>", 0, 0}});
 }
 
