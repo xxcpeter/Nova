@@ -141,10 +141,10 @@ For targeted commands and guidance on adding regression cases, see the [Testing 
 
 ## Roadmap
 
-- Expand the language subset handled by the Nova-written compiler path.
-- Harden import/path handling, generated-code escaping, and runtime boundaries.
+- [Expand self-hosted compiler coverage and bootstrap parity](https://github.com/xxcpeter/Nova/issues/3).
+- [Harden process and filesystem runtime interfaces](https://github.com/xxcpeter/Nova/issues/2), along with import/path handling and generated-code escaping.
 - Improve diagnostics with code frames and richer source context.
-- Evolve textual imports toward a real module system.
+- [Design a real module system beyond textual imports](https://github.com/xxcpeter/Nova/issues/4).
 - Improve runtime memory management and reduce bootstrap dependencies.
 - Explore formatter and language-server support.
 
